@@ -21,5 +21,3 @@ jobs:
         uses: hianhianhian/gha-cherry-pick@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-# test commit
