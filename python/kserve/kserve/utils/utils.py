@@ -26,7 +26,12 @@ import psutil
 from cloudevents.conversion import to_binary, to_structured
 from cloudevents.http import CloudEvent
 from grpc import ServicerContext
-from kserve.protocol.infer_type import InferInput, InferOutput, InferRequest, InferResponse
+from kserve.protocol.infer_type import (
+    InferInput,
+    InferOutput,
+    InferRequest,
+    InferResponse,
+)
 from ..errors import InvalidInput
 
 
@@ -183,14 +188,15 @@ def get_predict_input(
             infer_inputs = []
             for input in payload.inputs:
                 if (
-                input.datatype == "BYTES"
-                and len(input.data) > 0
-                and isinstance(input.data[0], str)
-            ):
+                    input.datatype == "BYTES"
+                    and len(input.data) > 0
+                    and isinstance(input.data[0], str)
+                ):
                     infer_inputs.append(input.data)
                 else:
                     infer_inputs.append(input.as_numpy())
             return infer_inputs
+
 
 def get_predict_response(
     payload: Union[Dict, InferRequest],
@@ -275,11 +281,14 @@ def merge_request_inputs(inputs: List[InferInput]) -> np.ndarray:
         batch_data += input.data
 
     batch_input = InferInput(
-        name="input-0", data=batch_data, shape=batch_shape, datatype=batch_datatype)
+        name="input-0", data=batch_data, shape=batch_shape, datatype=batch_datatype
+    )
     return batch_input.as_numpy()
 
 
-def merge_request_outputs(inputs: List[InferInput], result: np.ndarray) -> List[InferOutput]:
+def merge_request_outputs(
+    inputs: List[InferInput], result: np.ndarray
+) -> List[InferOutput]:
     infer_outputs = []
     ele_index = 0
     output_datatype = result.dtype
@@ -303,7 +312,7 @@ def merge_request_outputs(inputs: List[InferInput], result: np.ndarray) -> List[
             name=f"output-{str(index)}",
             shape=output_shape,
             datatype=from_np_dtype(output_datatype),
-            data=output_data
+            data=output_data,
         )
         infer_outputs.append(infer_output)
     return infer_outputs
