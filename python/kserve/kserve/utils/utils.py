@@ -185,16 +185,7 @@ def get_predict_input(
         if content_type == "pd":
             return payload.as_dataframe()
         else:
-            infer_inputs = []
-            for input in payload.inputs:
-                if (
-                    input.datatype == "BYTES"
-                    and len(input.data) > 0
-                    and isinstance(input.data[0], str)
-                ):
-                    infer_inputs.append(input.data)
-                else:
-                    infer_inputs.append(input.as_numpy())
+            infer_inputs = merge_request_inputs(payload.inputs.copy())
             return infer_inputs
 
 
@@ -283,6 +274,13 @@ def merge_request_inputs(inputs: List[InferInput]) -> np.ndarray:
     batch_input = InferInput(
         name="input-0", data=batch_data, shape=batch_shape, datatype=batch_datatype
     )
+    if (
+        inputs[0].datatype == "BYTES"
+        and len(inputs[0].data) > 0
+        and isinstance(inputs[0].data[0], str)
+    ):
+        return batch_input
+
     return batch_input.as_numpy()
 
 
