@@ -382,11 +382,13 @@ class HuggingfaceGenerativeModel(
             else [prompt]
         )
         if isinstance(prompts[0][0], int):
-            inputs = {"input_ids": torch.tensor(prompts, dtype=torch.int64)}
+            inputs = {
+                "input_ids": torch.tensor(prompts, dtype=torch.int64).to(self._device)
+            }
         else:
             inputs = self._tokenizer(
                 prompts, padding=True, return_tensors=TensorType.PYTORCH
-            )
+            ).to(self._device)
         num_input_tokens = len(inputs["input_ids"])
         if params.max_tokens is None:
             params.max_tokens = self.max_length - num_input_tokens
@@ -412,7 +414,10 @@ class HuggingfaceGenerativeModel(
                 for seq in stop
             ]
             stop_sequence_stopping_criteria = StopSequenceStoppingCriteria(
-                input_length=inputs["input_ids"].shape[-1],
+                # Encoder-decoder models do not include input tokens in output
+                input_length=(
+                    0 if self.is_encoder_decoder else inputs["input_ids"].shape[-1]
+                ),
                 stop_sequences=stop_sequences,
             )
             stopping_criteria = StoppingCriteriaList([stop_sequence_stopping_criteria])
@@ -430,6 +435,7 @@ class HuggingfaceGenerativeModel(
                 request=request,
                 generate_queue=response_queue,
                 system_fingerprint=self.system_fingerprint,
+                stop_sequence_stopping_criteria=stop_sequence_stopping_criteria,
             )
         else:
             outputs = await response_queue.get()
