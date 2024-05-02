@@ -279,7 +279,7 @@ def merge_request_inputs(inputs: List[InferInput]) -> np.ndarray:
         and len(inputs[0].data) > 0
         and isinstance(inputs[0].data[0], str)
     ):
-        return batch_input
+        return batch_data
 
     return batch_input.as_numpy()
 
