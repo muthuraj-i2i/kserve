@@ -116,6 +116,7 @@ func getRouterConfigs(configMap *v1.ConfigMap) (*RouterConfig, error) {
 }
 
 func (r *InferenceGraphReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	testsToRerun := "Test"
 	_ = context.Background()
 
 	// Fetch the InferenceService instance
