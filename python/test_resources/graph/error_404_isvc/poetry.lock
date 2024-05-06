@@ -860,7 +860,6 @@ files = []
 develop = true
 
 [package.dependencies]
-aiohttp = "3.9.4"
 async-timeout = {version = "^4.0.3", markers = "python_version >= \"3.11.dev0\" and python_version < \"3.12.dev0\""}
 cloudevents = "^1.6.2"
 fastapi = "^0.109.1"
