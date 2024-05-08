@@ -476,6 +476,7 @@ const (
 	IstioVirtualServiceKind = "VirtualService"
 	KnativeServiceKind      = "Service"
 	ClusterLocalModelKind   = "ClusterLocalModel"
+	KedaScaledObjectKind    = "ScaledObject"
 )
 
 // Model Parallel Options
