@@ -1164,6 +1164,10 @@
       "description": "ComponentExtensionSpec defines the deployment configuration for a given InferenceService component",
       "type": "object",
       "properties": {
+        "ScaleMetricType": {
+          "description": "Type of metric to use. Options are Utilization, or AverageValue.",
+          "type": "string"
+        },
         "annotations": {
           "description": "Annotations that will be add to the component pod. More info: http://kubernetes.io/docs/user-guide/annotations",
           "type": "object",
@@ -1189,10 +1193,6 @@
         "deploymentStrategy": {
           "description": "The deployment strategy to use to replace existing pods with new ones. Only applicable for raw deployment mode.",
           "$ref": "#/definitions/k8s.io.api.apps.v1.DeploymentStrategy"
-        },
-        "kedascaler": {
-          "description": "Keda Scaler object to trigger the auto scalling",
-          "$ref": "#/definitions/v1beta1.KedaScaler"
         },
         "labels": {
           "description": "Labels that will be add to the component pod. More info: http://kubernetes.io/docs/user-guide/labels",
@@ -2325,6 +2325,10 @@
       "description": "ExplainerSpec defines the container spec for a model explanation server, The following fields follow a \"1-of\" semantic. Users must specify exactly one spec.",
       "type": "object",
       "properties": {
+        "ScaleMetricType": {
+          "description": "Type of metric to use. Options are Utilization, or AverageValue.",
+          "type": "string"
+        },
         "activeDeadlineSeconds": {
           "description": "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
           "type": "integer",
@@ -2449,10 +2453,6 @@
           },
           "x-kubernetes-patch-merge-key": "name",
           "x-kubernetes-patch-strategy": "merge"
-        },
-        "kedascaler": {
-          "description": "Keda Scaler object to trigger the auto scalling",
-          "$ref": "#/definitions/v1beta1.KedaScaler"
         },
         "labels": {
           "description": "Labels that will be add to the component pod. More info: http://kubernetes.io/docs/user-guide/labels",
@@ -4515,6 +4515,10 @@
       "description": "PredictorSpec defines the configuration for a predictor, The following fields follow a \"1-of\" semantic. Users must specify exactly one spec.",
       "type": "object",
       "properties": {
+        "ScaleMetricType": {
+          "description": "Type of metric to use. Options are Utilization, or AverageValue.",
+          "type": "string"
+        },
         "activeDeadlineSeconds": {
           "description": "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
           "type": "integer",
@@ -4639,10 +4643,6 @@
           },
           "x-kubernetes-patch-merge-key": "name",
           "x-kubernetes-patch-strategy": "merge"
-        },
-        "kedascaler": {
-          "description": "Keda Scaler object to trigger the auto scalling",
-          "$ref": "#/definitions/v1beta1.KedaScaler"
         },
         "labels": {
           "description": "Labels that will be add to the component pod. More info: http://kubernetes.io/docs/user-guide/labels",
@@ -5441,6 +5441,10 @@
       "description": "TransformerSpec defines transformer service for pre/post processing",
       "type": "object",
       "properties": {
+        "ScaleMetricType": {
+          "description": "Type of metric to use. Options are Utilization, or AverageValue.",
+          "type": "string"
+        },
         "activeDeadlineSeconds": {
           "description": "Optional duration in seconds the pod may be active on the node relative to StartTime before the system will actively try to mark it failed and kill associated containers. Value must be a positive integer.",
           "type": "integer",
@@ -5561,10 +5565,6 @@
           },
           "x-kubernetes-patch-merge-key": "name",
           "x-kubernetes-patch-strategy": "merge"
-        },
-        "kedascaler": {
-          "description": "Keda Scaler object to trigger the auto scalling",
-          "$ref": "#/definitions/v1beta1.KedaScaler"
         },
         "labels": {
           "description": "Labels that will be add to the component pod. More info: http://kubernetes.io/docs/user-guide/labels",
