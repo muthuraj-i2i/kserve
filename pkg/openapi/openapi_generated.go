@@ -2203,9 +2203,30 @@ func schema_pkg_apis_serving_v1beta1_ComponentExtensionSpec(ref common.Reference
 							Format:      "",
 						},
 					},
-					"ScaleMetricType": {
+					"scaleMetricType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Type of metric to use. Options are Utilization, or AverageValue.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"serverAddress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Address of Prometheus server.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"query": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Query to run to get metrics from Prometheus",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"queryParameters": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A comma-separated list of query Parameters to include while querying the Prometheus endpoint.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -4679,9 +4700,30 @@ func schema_pkg_apis_serving_v1beta1_ExplainerSpec(ref common.ReferenceCallback)
 							Format:      "",
 						},
 					},
-					"ScaleMetricType": {
+					"scaleMetricType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Type of metric to use. Options are Utilization, or AverageValue.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"serverAddress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Address of Prometheus server.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"query": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Query to run to get metrics from Prometheus",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"queryParameters": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A comma-separated list of query Parameters to include while querying the Prometheus endpoint.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -8719,9 +8761,30 @@ func schema_pkg_apis_serving_v1beta1_PredictorSpec(ref common.ReferenceCallback)
 							Format:      "",
 						},
 					},
-					"ScaleMetricType": {
+					"scaleMetricType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Type of metric to use. Options are Utilization, or AverageValue.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"serverAddress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Address of Prometheus server.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"query": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Query to run to get metrics from Prometheus",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"queryParameters": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A comma-separated list of query Parameters to include while querying the Prometheus endpoint.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -10321,9 +10384,30 @@ func schema_pkg_apis_serving_v1beta1_TransformerSpec(ref common.ReferenceCallbac
 							Format:      "",
 						},
 					},
-					"ScaleMetricType": {
+					"scaleMetricType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Type of metric to use. Options are Utilization, or AverageValue.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"serverAddress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Address of Prometheus server.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"query": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Query to run to get metrics from Prometheus",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"queryParameters": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A comma-separated list of query Parameters to include while querying the Prometheus endpoint.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
