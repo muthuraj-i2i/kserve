@@ -3817,7 +3817,7 @@ func schema_pkg_apis_serving_v1beta1_DeployConfig(ref common.ReferenceCallback) 
 							Format: "",
 						},
 					},
-					"serviceAnnotationDisallowedList": {
+					"annotationsPropagationDisallowList": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
@@ -3831,7 +3831,7 @@ func schema_pkg_apis_serving_v1beta1_DeployConfig(ref common.ReferenceCallback) 
 							},
 						},
 					},
-					"serviceLabelDisallowedList": {
+					"labelsPropagationDisallowList": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
