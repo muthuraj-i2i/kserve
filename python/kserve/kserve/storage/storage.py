@@ -287,7 +287,9 @@ class Storage(object):
         model, _, hash_value = components[1].partition(":")
         revision = hash_value if hash_value else None
 
-        snapshot_download(repo_id=f"{repo}/{model}", revision=revision, local_dir=temp_dir)
+        snapshot_download(
+            repo_id=f"{repo}/{model}", revision=revision, local_dir=temp_dir
+        )
         return temp_dir
 
     @staticmethod
