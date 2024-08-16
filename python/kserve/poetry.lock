@@ -4098,7 +4098,7 @@ doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linke
 test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
 
 [extras]
-hf-storage = ["torch", "transformers"]
+hf-storage = []
 logging = ["asgi-logger"]
 ray = ["ray"]
 storage = ["azure-identity", "azure-storage-blob", "azure-storage-file-share", "boto3", "google-cloud-storage", "requests"]
@@ -4106,4 +4106,4 @@ storage = ["azure-identity", "azure-storage-blob", "azure-storage-file-share", "
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<3.12"
-content-hash = "334ba21cb36e9f8ed59928fc4810066de14f0230faed6a5f00ee3648a9899816"
+content-hash = "62a463cd8252b43a1caa1572ccc6be4fc37a1a1f5efcce6cd8ed4e355366f799"

@@ -84,8 +84,7 @@ storage = [
     "boto3"
 ]
 hf-storage = [
-    "transformers",
-    "torch"
+    "huggingface-hub"
 ]
 logging = [
     "asgi-logger"
