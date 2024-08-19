@@ -282,3 +282,53 @@ def test_huggingface_openai_text_2_text():
     assert res["choices"][0]["text"] == "Das ist für Deutschland"
 
     kserve_client.delete(service_name, KSERVE_TEST_NAMESPACE)
+
+
+
+@pytest.mark.llm
+def test_huggingface_openai_chat_completions_storage():
+    service_name = "hf-opt-125m-chat-storage"
+    predictor = V1beta1PredictorSpec(
+        min_replicas=1,
+        model=V1beta1ModelSpec(
+            model_format=V1beta1ModelFormat(
+                name="huggingface",
+            ),
+            args=[
+                "--tokenizer_revision",
+                "27dcfa74d334bc871f3234de431e71c6eeba5dd6",
+                "--backend",
+                "huggingface",
+                "--max_length",
+                "512",
+            ],
+            storage_uri="hf://facebook/opt-125m/27dcfa74d334bc871f3234de431e71c6eeba5dd6",
+            resources=V1ResourceRequirements(
+                requests={"cpu": "1", "memory": "2Gi"},
+                limits={"cpu": "1", "memory": "4Gi"},
+            ),
+        ),
+    )
+
+    isvc = V1beta1InferenceService(
+        api_version=constants.KSERVE_V1BETA1,
+        kind=constants.KSERVE_KIND,
+        metadata=client.V1ObjectMeta(
+            name=service_name, namespace=KSERVE_TEST_NAMESPACE
+        ),
+        spec=V1beta1InferenceServiceSpec(predictor=predictor),
+    )
+
+    kserve_client = KServeClient(
+        config_file=os.environ.get("KUBECONFIG", "~/.kube/config")
+    )
+    kserve_client.create(isvc)
+    kserve_client.wait_isvc_ready(service_name, namespace=KSERVE_TEST_NAMESPACE)
+
+    res = generate(service_name, "./data/opt_125m_input_generate.json")
+    assert (
+        res["choices"][0]["message"]["content"]
+        == "I'm not sure if this is a good idea, but I'm not sure if I should be"
+    )
+
+    kserve_client.delete(service_name, KSERVE_TEST_NAMESPACE)
