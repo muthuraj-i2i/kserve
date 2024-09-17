@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import sys
 
-from kserve.storage import Storage
+from kserve.storage import Storage, app
 from kserve.logging import configure_logging, logger
+import threading
 
 configure_logging()
 
@@ -14,4 +15,13 @@ src_uri = sys.argv[1]
 dest_path = sys.argv[2]
 
 logger.info("Initializing, args: src_uri [%s] dest_path[ [%s]" % (src_uri, dest_path))
-Storage.download(src_uri, dest_path)
+
+if __name__ == "__main__":
+    import uvicorn
+
+    # run the app in a separate thread
+    threading.Thread(
+        target=uvicorn.run, args=(app,), kwargs={"host": "0.0.0.0"}
+    ).start()
+
+    Storage.download(src_uri, dest_path)

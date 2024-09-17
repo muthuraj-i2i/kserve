@@ -37,6 +37,8 @@ from botocore import UNSIGNED
 from botocore.client import Config
 from google.auth import exceptions
 from google.cloud import storage
+from fastapi import FastAPI
+import signal
 
 from ..logging import logger
 
@@ -63,13 +65,43 @@ _PVC_PREFIX = "/mnt/pvc"
 _HDFS_SECRET_DIRECTORY = "/var/secrets/kserve-hdfscreds"
 _HDFS_FILE_SECRETS = ["KERBEROS_KEYTAB", "TLS_CERT", "TLS_KEY", "TLS_CA"]
 
+app = FastAPI()
+
+# Simulated metrics storage (in-memory)
+metrics_data = {
+    "name": "WAITING",
+    "description": "Storage Intializer waiting to be called",
+    "timestamp": "",
+}
+END_EVENT = False
+
+
+@app.get("/metrics")
+async def get_metrics() -> Dict[str, str]:
+    """
+    Endpoint to get the current metrics.
+    """
+    global END_EVENT
+    
+    if END_EVENT:
+        os.kill(os.getpid(), signal.SIGTERM)
+    if metrics_data["name"] == "COMPLETED":
+        END_EVENT = True
+    return metrics_data
+
 
 class Storage(object):
     @staticmethod
     def download(uri: str, out_dir: str = None) -> str:
+        global metrics_data
         start = time.monotonic()
         Storage._update_with_storage_spec()
         logger.info("Copying contents of %s to local", uri)
+        metrics_data = {
+            "name": "INITIALIZING",
+            "description": f"Copying contents of {uri} to local",
+            "timestamp": "",
+        }
 
         if uri.startswith(_PVC_PREFIX) and not os.path.exists(uri):
             raise Exception(f"Cannot locate source uri {uri} for PVC")
@@ -112,7 +144,11 @@ class Storage(object):
                     + "\n'%s', '%s', '%s', and '%s' are the current available storage type."
                     % (_GCS_PREFIX, _S3_PREFIX, _LOCAL_PREFIX, _HTTP_PREFIX)
                 )
-
+        metrics_data = {
+            "name": "COMPLETED",
+            "description": f"Successfully copied {uri} to {out_dir}",
+            "timestamp": "",
+        }
         logger.info("Successfully copied %s to %s", uri, out_dir)
         logger.info(f"Model downloaded in {time.monotonic() - start} seconds.")
         return model_dir
@@ -286,6 +322,7 @@ class Storage(object):
 
     @staticmethod
     def _download_gcs(uri, temp_dir: str) -> str:
+        global metrics_data
         try:
             storage_client = storage.Client()
         except exceptions.DefaultCredentialsError:
@@ -313,6 +350,11 @@ class Storage(object):
             if subdir_object_key.strip() != "" and not subdir_object_key.endswith("/"):
                 dest_path = os.path.join(temp_dir, subdir_object_key)
                 logger.info("Downloading: %s", dest_path)
+                metrics_data = {
+                    "name": "INPROGRESS",
+                    "description": f"Downloading: {dest_path}",
+                    "timestamp": "",
+                }
                 blob.download_to_filename(dest_path)
                 file_count += 1
         if file_count == 0:

@@ -14,4 +14,4 @@
 
 # flake8: noqa
 
-from kserve.storage.storage import Storage
+from kserve.storage.storage import Storage, app

@@ -75,6 +75,7 @@ storage = [
     "azure-storage-file-share",
     "azure-identity",
     "boto3",
+    "fastapi",
 ]
 logging = [
     "asgi-logger"

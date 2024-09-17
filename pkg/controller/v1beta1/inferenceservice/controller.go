@@ -19,6 +19,9 @@ package inferenceservice
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -71,7 +74,7 @@ import (
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;create
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get
 // +kubebuilder:rbac:groups=core,resources=namespaces,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=events,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
@@ -262,6 +265,24 @@ func (r *InferenceServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		r.Recorder.Event(isvc, v1.EventTypeWarning, "InternalError", err.Error())
 		return reconcile.Result{}, err
 	}
+	r.Log.Info("----------- calling storage initializer endpoint -----------")
+
+	url := fmt.Sprintf("http://%s.%s.svc.cluster.local", isvc.Spec.Predictor.ServiceAccountName, isvc.Namespace)
+
+	// Send a GET request
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatalf("Error making the request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("Error reading the response body: %v", err)
+	}
+
+	fmt.Println("Response from FastAPI:", string(body))
 
 	return ctrl.Result{}, nil
 }
