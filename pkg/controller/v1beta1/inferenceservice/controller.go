@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"reflect"
 
@@ -206,6 +205,7 @@ func (r *InferenceServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		reconcilers = append(reconcilers, components.NewExplainer(r.Client, r.Clientset, r.Scheme, isvcConfig, deploymentMode))
 	}
 	for _, reconciler := range reconcilers {
+		r.Log.Info("-------- reconciler --------")
 		result, err := reconciler.Reconcile(isvc)
 		if err != nil {
 			r.Log.Error(err, "Failed to reconcile", "reconciler", reflect.ValueOf(reconciler), "Name", isvc.Name)
@@ -265,24 +265,25 @@ func (r *InferenceServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		r.Recorder.Event(isvc, v1.EventTypeWarning, "InternalError", err.Error())
 		return reconcile.Result{}, err
 	}
-	r.Log.Info("----------- calling storage initializer endpoint -----------")
+	if isvc.Status.Components != nil {
+		if predictorComponent, ok := isvc.Status.Components[v1beta1api.PredictorComponent]; ok {
+			if predictorComponent.URL != nil && predictorComponent.URL.Host != "" {
+				url := fmt.Sprintf("http://sklearn-v2-iris-predictor-00001.%s.svc.cluster.local/metrics", isvc.Namespace)
+				resp, err := http.Get(url)
+				if err != nil {
+				} else {
+					body, err := ioutil.ReadAll(resp.Body)
+					if err != nil {
+					}
+					r.Log.Info("-------- Response from FastAPI: --------", "body", string(body))
+				}
+				defer resp.Body.Close()
 
-	url := fmt.Sprintf("http://%s.%s.svc.cluster.local", isvc.Spec.Predictor.ServiceAccountName, isvc.Namespace)
+				// Read the response body
 
-	// Send a GET request
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Fatalf("Error making the request: %v", err)
+			}
+		}
 	}
-	defer resp.Body.Close()
-
-	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf("Error reading the response body: %v", err)
-	}
-
-	fmt.Println("Response from FastAPI:", string(body))
 
 	return ctrl.Result{}, nil
 }
