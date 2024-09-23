@@ -6100,6 +6100,10 @@ spec:
                     type: integer
                   priorityClassName:
                     type: string
+                  query:
+                    type: string
+                  queryParameters:
+                    type: string
                   readinessGates:
                     items:
                       properties:
@@ -6138,9 +6142,37 @@ spec:
                     - memory
                     - concurrency
                     - rps
+                    - prometheus
+                    type: string
+                  scaleMetricType:
                     type: string
                   scaleTarget:
                     type: integer
+                  scaler:
+                    properties:
+                      maxReplicas:
+                        type: integer
+                      minReplicas:
+                        type: integer
+                      query:
+                        type: string
+                      queryParameters:
+                        type: string
+                      scaleMetric:
+                        enum:
+                        - cpu
+                        - memory
+                        - concurrency
+                        - rps
+                        - prometheus
+                        type: string
+                      scaleMetricType:
+                        type: string
+                      scaleTarget:
+                        type: integer
+                      serverAddress:
+                        type: string
+                    type: object
                   schedulerName:
                     type: string
                   schedulingGates:
@@ -6230,6 +6262,8 @@ spec:
                             type: string
                         type: object
                     type: object
+                  serverAddress:
+                    type: string
                   serviceAccount:
                     type: string
                   serviceAccountName:
@@ -13838,6 +13872,10 @@ spec:
                       workingDir:
                         type: string
                     type: object
+                  query:
+                    type: string
+                  queryParameters:
+                    type: string
                   readinessGates:
                     items:
                       properties:
@@ -13876,9 +13914,37 @@ spec:
                     - memory
                     - concurrency
                     - rps
+                    - prometheus
+                    type: string
+                  scaleMetricType:
                     type: string
                   scaleTarget:
                     type: integer
+                  scaler:
+                    properties:
+                      maxReplicas:
+                        type: integer
+                      minReplicas:
+                        type: integer
+                      query:
+                        type: string
+                      queryParameters:
+                        type: string
+                      scaleMetric:
+                        enum:
+                        - cpu
+                        - memory
+                        - concurrency
+                        - rps
+                        - prometheus
+                        type: string
+                      scaleMetricType:
+                        type: string
+                      scaleTarget:
+                        type: integer
+                      serverAddress:
+                        type: string
+                    type: object
                   schedulerName:
                     type: string
                   schedulingGates:
@@ -13968,6 +14034,8 @@ spec:
                             type: string
                         type: object
                     type: object
+                  serverAddress:
+                    type: string
                   serviceAccount:
                     type: string
                   serviceAccountName:
@@ -19510,6 +19578,10 @@ spec:
                     type: integer
                   priorityClassName:
                     type: string
+                  query:
+                    type: string
+                  queryParameters:
+                    type: string
                   readinessGates:
                     items:
                       properties:
@@ -19548,9 +19620,37 @@ spec:
                     - memory
                     - concurrency
                     - rps
+                    - prometheus
+                    type: string
+                  scaleMetricType:
                     type: string
                   scaleTarget:
                     type: integer
+                  scaler:
+                    properties:
+                      maxReplicas:
+                        type: integer
+                      minReplicas:
+                        type: integer
+                      query:
+                        type: string
+                      queryParameters:
+                        type: string
+                      scaleMetric:
+                        enum:
+                        - cpu
+                        - memory
+                        - concurrency
+                        - rps
+                        - prometheus
+                        type: string
+                      scaleMetricType:
+                        type: string
+                      scaleTarget:
+                        type: integer
+                      serverAddress:
+                        type: string
+                    type: object
                   schedulerName:
                     type: string
                   schedulingGates:
@@ -19640,6 +19740,8 @@ spec:
                             type: string
                         type: object
                     type: object
+                  serverAddress:
+                    type: string
                   serviceAccount:
                     type: string
                   serviceAccountName:
