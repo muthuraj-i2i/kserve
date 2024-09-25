@@ -19,14 +19,13 @@ package inferenceservice
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"reflect"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	istioclientv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierr "k8s.io/apimachinery/pkg/api/errors"
@@ -43,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1alpha1api "github.com/kserve/kserve/pkg/apis/serving/v1alpha1"
+	"github.com/kserve/kserve/pkg/apis/serving/v1beta1"
 	v1beta1api "github.com/kserve/kserve/pkg/apis/serving/v1beta1"
 	"github.com/kserve/kserve/pkg/constants"
 	"github.com/kserve/kserve/pkg/controller/v1beta1/inferenceservice/components"
@@ -265,25 +265,43 @@ func (r *InferenceServiceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		r.Recorder.Event(isvc, v1.EventTypeWarning, "InternalError", err.Error())
 		return reconcile.Result{}, err
 	}
-	if isvc.Status.Components != nil {
-		if predictorComponent, ok := isvc.Status.Components[v1beta1api.PredictorComponent]; ok {
-			if predictorComponent.URL != nil && predictorComponent.URL.Host != "" {
-				url := fmt.Sprintf("http://sklearn-v2-iris-predictor-00001.%s.svc.cluster.local/metrics", isvc.Namespace)
-				resp, err := http.Get(url)
-				if err != nil {
-				} else {
-					body, err := ioutil.ReadAll(resp.Body)
-					if err != nil {
-					}
-					r.Log.Info("-------- Response from FastAPI: --------", "body", string(body))
-				}
-				defer resp.Body.Close()
 
-				// Read the response body
+	var podLabelValue string
+	var podLabelKey string
 
-			}
-		}
+	predictorName := constants.PredictorServiceName(isvc.Name)
+	statusSpec := isvc.Status.Components[v1beta1.PredictorComponent]
+	if deploymentMode == constants.RawDeployment {
+		podLabelValue = constants.GetRawServiceLabel(predictorName)
+		podLabelKey = constants.RawDeploymentAppLabel
+	} else {
+		podLabelValue = statusSpec.LatestCreatedRevision
+		podLabelKey = constants.RevisionLabel
 	}
+	podList := &v1.PodList{}
+
+	opts := []client.ListOption{
+		client.InNamespace(req.Namespace),
+		client.MatchingLabels{podLabelKey: podLabelValue},
+	}
+	perr := r.Client.List(context.TODO(), podList, opts...)
+	if perr != nil {
+		return ctrl.Result{}, perr
+	}
+
+	// pod := &corev1.Pod{}
+	// perr := r.Client.Get(ctx, req.NamespacedName, pod)
+	// if perr != nil {
+	// 	if client.IgnoreNotFound(err) != nil {
+	// 		r.Log.Info("----------------- IgnoreNotFound -----------------", "pod", pod)
+	// 		return ctrl.Result{}, err
+	// 	}
+	// 	r.Log.Info("----------------- pod -----------------", "pod", pod)
+	// 	// Object not found, return
+	// 	return ctrl.Result{}, nil
+	// }
+
+	r.Log.Info("----------------- pod list -----------------", "pod", podList)
 
 	return ctrl.Result{}, nil
 }
@@ -359,7 +377,8 @@ func (r *InferenceServiceReconciler) SetupWithManager(mgr ctrl.Manager, deployCo
 
 	ctrlBuilder := ctrl.NewControllerManagedBy(mgr).
 		For(&v1beta1api.InferenceService{}).
-		Owns(&appsv1.Deployment{})
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Pod{})
 
 	if ksvcFound {
 		ctrlBuilder = ctrlBuilder.Owns(&knservingv1.Service{})
