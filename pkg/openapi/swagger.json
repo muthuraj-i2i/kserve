@@ -2108,8 +2108,22 @@
     "v1beta1.DeployConfig": {
       "type": "object",
       "properties": {
+        "annotationsPropagationDisallowList": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "default": ""
+          }
+        },
         "defaultDeploymentMode": {
           "type": "string"
+        },
+        "labelsPropagationDisallowList": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "default": ""
+          }
         }
       }
     },
