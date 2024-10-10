@@ -48,7 +48,6 @@ var (
 )
 
 // +kubebuilder:object:generate=false
-// +k8s:deepcopy-gen=false
 // +k8s:openapi-gen=false
 // InferenceServiceValidator is responsible for validating the InferenceService resource
 // when it is created, updated, or deleted.

@@ -58,7 +58,6 @@ var (
 )
 
 // +kubebuilder:object:generate=false
-// +k8s:deepcopy-gen=false
 // +k8s:openapi-gen=false
 // InferenceGraphValidator is responsible for setting default values on the InferenceGraph resources
 // when created or updated.
