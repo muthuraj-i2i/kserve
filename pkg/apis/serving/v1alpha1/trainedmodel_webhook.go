@@ -50,7 +50,6 @@ var (
 )
 
 // +kubebuilder:object:generate=false
-// +k8s:deepcopy-gen=false
 // +k8s:openapi-gen=false
 // TrainedModelValidator is responsible for setting default values on the TrainedModel resources
 // when created or updated.
