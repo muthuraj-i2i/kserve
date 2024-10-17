@@ -58,6 +58,7 @@ class V1beta1ComponentExtensionSpec(object):
         'min_replicas': 'int',
         'scale_metric': 'str',
         'scale_target': 'int',
+        'scaler': 'V1beta1ScalerSpec',
         'timeout': 'int'
     }
 
@@ -73,10 +74,11 @@ class V1beta1ComponentExtensionSpec(object):
         'min_replicas': 'minReplicas',
         'scale_metric': 'scaleMetric',
         'scale_target': 'scaleTarget',
+        'scaler': 'scaler',
         'timeout': 'timeout'
     }
 
-    def __init__(self, annotations=None, batcher=None, canary_traffic_percent=None, container_concurrency=None, deployment_strategy=None, labels=None, logger=None, max_replicas=None, min_replicas=None, scale_metric=None, scale_target=None, timeout=None, local_vars_configuration=None):  # noqa: E501
+    def __init__(self, annotations=None, batcher=None, canary_traffic_percent=None, container_concurrency=None, deployment_strategy=None, labels=None, logger=None, max_replicas=None, min_replicas=None, scale_metric=None, scale_target=None, scaler=None, timeout=None, local_vars_configuration=None):  # noqa: E501
         """V1beta1ComponentExtensionSpec - a model defined in OpenAPI"""  # noqa: E501
         if local_vars_configuration is None:
             local_vars_configuration = Configuration()
@@ -93,6 +95,7 @@ class V1beta1ComponentExtensionSpec(object):
         self._min_replicas = None
         self._scale_metric = None
         self._scale_target = None
+        self._scaler = None
         self._timeout = None
         self.discriminator = None
 
@@ -118,6 +121,8 @@ class V1beta1ComponentExtensionSpec(object):
             self.scale_metric = scale_metric
         if scale_target is not None:
             self.scale_target = scale_target
+        if scaler is not None:
+            self.scaler = scaler
         if timeout is not None:
             self.timeout = timeout
 
@@ -367,6 +372,27 @@ class V1beta1ComponentExtensionSpec(object):
         """
 
         self._scale_target = scale_target
+
+    @property
+    def scaler(self):
+        """Gets the scaler of this V1beta1ComponentExtensionSpec.  # noqa: E501
+
+
+        :return: The scaler of this V1beta1ComponentExtensionSpec.  # noqa: E501
+        :rtype: V1beta1ScalerSpec
+        """
+        return self._scaler
+
+    @scaler.setter
+    def scaler(self, scaler):
+        """Sets the scaler of this V1beta1ComponentExtensionSpec.
+
+
+        :param scaler: The scaler of this V1beta1ComponentExtensionSpec.  # noqa: E501
+        :type: V1beta1ScalerSpec
+        """
+
+        self._scaler = scaler
 
     @property
     def timeout(self):

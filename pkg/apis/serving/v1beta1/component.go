@@ -93,6 +93,9 @@ type ComponentExtensionSpec struct {
 	// CanaryTrafficPercent defines the traffic split percentage between the candidate revision and the last ready revision
 	// +optional
 	CanaryTrafficPercent *int64 `json:"canaryTrafficPercent,omitempty"`
+	// Specs for Scaling
+	// +optional
+	ScalerSpec *ScalerSpec `json:"scaler,omitempty"`
 	// Activate request/response logging and logger configurations
 	// +optional
 	Logger *LoggerSpec `json:"logger,omitempty"`
@@ -114,7 +117,7 @@ type ComponentExtensionSpec struct {
 }
 
 // ScaleMetric enum
-// +kubebuilder:validation:Enum=cpu;memory;concurrency;rps
+// +kubebuilder:validation:Enum=cpu;memory;concurrency;rps;prometheus
 type ScaleMetric string
 
 const (
@@ -122,6 +125,7 @@ const (
 	MetricMemory      ScaleMetric = "memory"
 	MetricConcurrency ScaleMetric = "concurrency"
 	MetricRPS         ScaleMetric = "rps"
+	MetricPrometheus  ScaleMetric = "prometheus"
 )
 
 // Default the ComponentExtensionSpec
