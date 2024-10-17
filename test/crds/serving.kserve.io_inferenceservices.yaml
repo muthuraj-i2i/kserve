@@ -8117,10 +8117,6 @@ spec:
                     type: integer
                   priorityClassName:
                     type: string
-                  query:
-                    type: string
-                  queryParameters:
-                    type: string
                   readinessGates:
                     items:
                       properties:
@@ -8161,18 +8157,16 @@ spec:
                     - rps
                     - prometheus
                     type: string
-                  scaleMetricType:
-                    type: string
                   scaleTarget:
                     type: integer
                   scaler:
                     properties:
                       maxReplicas:
                         type: integer
+                      metricQuery:
+                        type: string
                       minReplicas:
                         type: integer
-                      query:
-                        type: string
                       queryParameters:
                         type: string
                       scaleMetric:
@@ -8279,8 +8273,6 @@ spec:
                             type: string
                         type: object
                     type: object
-                  serverAddress:
-                    type: string
                   serviceAccount:
                     type: string
                   serviceAccountName:
@@ -15889,10 +15881,6 @@ spec:
                       workingDir:
                         type: string
                     type: object
-                  query:
-                    type: string
-                  queryParameters:
-                    type: string
                   readinessGates:
                     items:
                       properties:
@@ -15933,18 +15921,16 @@ spec:
                     - rps
                     - prometheus
                     type: string
-                  scaleMetricType:
-                    type: string
                   scaleTarget:
                     type: integer
                   scaler:
                     properties:
                       maxReplicas:
                         type: integer
+                      metricQuery:
+                        type: string
                       minReplicas:
                         type: integer
-                      query:
-                        type: string
                       queryParameters:
                         type: string
                       scaleMetric:
@@ -16051,8 +16037,6 @@ spec:
                             type: string
                         type: object
                     type: object
-                  serverAddress:
-                    type: string
                   serviceAccount:
                     type: string
                   serviceAccountName:
@@ -25145,10 +25129,6 @@ spec:
                     type: integer
                   priorityClassName:
                     type: string
-                  query:
-                    type: string
-                  queryParameters:
-                    type: string
                   readinessGates:
                     items:
                       properties:
@@ -25189,18 +25169,16 @@ spec:
                     - rps
                     - prometheus
                     type: string
-                  scaleMetricType:
-                    type: string
                   scaleTarget:
                     type: integer
                   scaler:
                     properties:
                       maxReplicas:
                         type: integer
+                      metricQuery:
+                        type: string
                       minReplicas:
                         type: integer
-                      query:
-                        type: string
                       queryParameters:
                         type: string
                       scaleMetric:
@@ -25307,8 +25285,6 @@ spec:
                             type: string
                         type: object
                     type: object
-                  serverAddress:
-                    type: string
                   serviceAccount:
                     type: string
                   serviceAccountName:
