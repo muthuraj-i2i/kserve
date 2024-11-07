@@ -31,11 +31,12 @@ import (
 
 // ConfigMap Keys
 const (
-	ExplainerConfigKeyName = "explainers"
-	IngressConfigKeyName   = "ingress"
-	DeployConfigName       = "deploy"
-	LocalModelConfigName   = "localModel"
-	SecurityConfigName     = "security"
+	ExplainerConfigKeyName        = "explainers"
+	IngressConfigKeyName          = "ingress"
+	DeployConfigName              = "deploy"
+	LocalModelConfigName          = "localModel"
+	SecurityConfigName            = "security"
+	InferenceServiceConfigKeyName = "inferenceService"
 )
 
 const (
@@ -61,6 +62,11 @@ type ExplainersConfig struct {
 type InferenceServicesConfig struct {
 	// Explainer configurations
 	Explainers ExplainersConfig `json:"explainers"`
+
+	// AnnotationsPropagationDisallowList is a list of annotations that are not allowed to be propagated to the knative service
+	AnnotationsPropagationDisallowList []string `json:"annotationsPropagationDisallowList,omitempty"`
+	// LabelsPropagationDisallowList is a list of labels that are not allowed to be propagated to the knative service
+	LabelsPropagationDisallowList []string `json:"labelsPropagationDisallowList,omitempty"`
 }
 
 // +kubebuilder:object:generate=false
@@ -105,11 +111,27 @@ func NewInferenceServicesConfig(clientset kubernetes.Interface) (*InferenceServi
 	icfg := &InferenceServicesConfig{}
 	for _, err := range []error{
 		getComponentConfig(ExplainerConfigKeyName, configMap, &icfg.Explainers),
+		getComponentConfig(InferenceServiceConfigKeyName, configMap, icfg),
 	} {
 		if err != nil {
 			return nil, err
 		}
 	}
+
+	if icfg.AnnotationsPropagationDisallowList == nil {
+		icfg.AnnotationsPropagationDisallowList = constants.ServiceAnnotationDisallowedList
+	} else {
+		icfg.AnnotationsPropagationDisallowList = append(
+			constants.ServiceAnnotationDisallowedList,
+			icfg.AnnotationsPropagationDisallowList...)
+	}
+	if icfg.LabelsPropagationDisallowList == nil {
+		icfg.LabelsPropagationDisallowList = constants.RevisionTemplateLabelDisallowedList
+	} else {
+		icfg.LabelsPropagationDisallowList = append(
+			constants.RevisionTemplateLabelDisallowedList, icfg.LabelsPropagationDisallowList...)
+	}
+
 	return icfg, nil
 }
 

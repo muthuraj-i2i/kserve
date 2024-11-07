@@ -76,7 +76,7 @@ func (p *Predictor) Reconcile(isvc *v1beta1.InferenceService) (ctrl.Result, erro
 	var sRuntimeAnnotations map[string]string
 
 	annotations := utils.Filter(isvc.Annotations, func(key string) bool {
-		return !utils.Includes(constants.ServiceAnnotationDisallowedList, key)
+		return !utils.IncludesRegex(p.inferenceServiceConfig.AnnotationsPropagationDisallowList, key)
 	})
 
 	addLoggerAnnotations(isvc.Spec.Predictor.Logger, annotations)
@@ -223,10 +223,12 @@ func (p *Predictor) Reconcile(isvc *v1beta1.InferenceService) (ctrl.Result, erro
 		podSpec.Containers = append(podSpec.Containers, sRuntime.Containers[:kserveContainerIdx]...)
 		podSpec.Containers = append(podSpec.Containers, sRuntime.Containers[kserveContainerIdx+1:]...)
 
-		// Label filter will be handled in ksvc_reconciler
-		sRuntimeLabels = sRuntime.ServingRuntimePodSpec.Labels
+		sRuntimeLabels = utils.Filter(sRuntime.ServingRuntimePodSpec.Labels, func(key string) bool {
+			return !utils.IncludesRegex(p.inferenceServiceConfig.LabelsPropagationDisallowList, key)
+		})
+
 		sRuntimeAnnotations = utils.Filter(sRuntime.ServingRuntimePodSpec.Annotations, func(key string) bool {
-			return !utils.Includes(constants.ServiceAnnotationDisallowedList, key)
+			return !utils.IncludesRegex(p.inferenceServiceConfig.AnnotationsPropagationDisallowList, key)
 		})
 	} else {
 		container = predictor.GetContainer(isvc.ObjectMeta, isvc.Spec.Predictor.GetExtensions(), p.inferenceServiceConfig)
@@ -271,9 +273,14 @@ func (p *Predictor) Reconcile(isvc *v1beta1.InferenceService) (ctrl.Result, erro
 
 	// Labels and annotations from predictor component
 	// Label filter will be handled in ksvc_reconciler
-	predictorLabels := isvc.Spec.Predictor.Labels
+
+	predictorLabels := utils.Filter(isvc.Spec.Predictor.Labels, func(key string) bool {
+		return !utils.IncludesRegex(p.inferenceServiceConfig.LabelsPropagationDisallowList, key)
+	})
+
+	// predictorLabels := isvc.Spec.Predictor.Labels
 	predictorAnnotations := utils.Filter(isvc.Spec.Predictor.Annotations, func(key string) bool {
-		return !utils.Includes(constants.ServiceAnnotationDisallowedList, key)
+		return !utils.IncludesRegex(p.inferenceServiceConfig.AnnotationsPropagationDisallowList, key)
 	})
 
 	// Labels and annotations priority: predictor component > isvc > ServingRuntimePodSpec

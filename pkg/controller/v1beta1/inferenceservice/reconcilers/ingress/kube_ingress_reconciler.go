@@ -43,15 +43,17 @@ type RawIngressReconciler struct {
 	client        client.Client
 	scheme        *runtime.Scheme
 	ingressConfig *v1beta1.IngressConfig
+	isvcConfig    *v1beta1.InferenceServicesConfig
 }
 
 func NewRawIngressReconciler(client client.Client,
 	scheme *runtime.Scheme,
-	ingressConfig *v1beta1.IngressConfig) (*RawIngressReconciler, error) {
+	ingressConfig *v1beta1.IngressConfig, isvcConfig *v1beta1.InferenceServicesConfig) (*RawIngressReconciler, error) {
 	return &RawIngressReconciler{
 		client:        client,
 		scheme:        scheme,
 		ingressConfig: ingressConfig,
+		isvcConfig:    isvcConfig,
 	}, nil
 }
 
@@ -118,10 +120,10 @@ func generateRule(ingressHost string, componentName string, path string, port in
 }
 
 func generateMetadata(isvc *v1beta1.InferenceService,
-	componentType constants.InferenceServiceComponent, name string) metav1.ObjectMeta {
+	componentType constants.InferenceServiceComponent, name string, isvcConfig *v1beta1.InferenceServicesConfig) metav1.ObjectMeta {
 	// get annotations from isvc
 	annotations := utils.Filter(isvc.Annotations, func(key string) bool {
-		return !utils.Includes(constants.ServiceAnnotationDisallowedList, key)
+		return !utils.IncludesRegex(isvcConfig.AnnotationsPropagationDisallowList, key)
 	})
 	objectMeta := metav1.ObjectMeta{
 		Name:      name,
@@ -140,8 +142,8 @@ func generateIngressHost(ingressConfig *v1beta1.IngressConfig,
 	isvc *v1beta1.InferenceService,
 	componentType string,
 	topLevelFlag bool,
-	name string) (string, error) {
-	metadata := generateMetadata(isvc, constants.InferenceServiceComponent(componentType), name)
+	name string, isvcConfig *v1beta1.InferenceServicesConfig) (string, error) {
+	metadata := generateMetadata(isvc, constants.InferenceServiceComponent(componentType), name, isvcConfig)
 	if !topLevelFlag {
 		return GenerateDomainName(metadata.Name, isvc.ObjectMeta, ingressConfig)
 	} else {
@@ -150,7 +152,7 @@ func generateIngressHost(ingressConfig *v1beta1.IngressConfig,
 }
 
 func createRawIngress(scheme *runtime.Scheme, isvc *v1beta1.InferenceService,
-	ingressConfig *v1beta1.IngressConfig, client client.Client) (*netv1.Ingress, error) {
+	ingressConfig *v1beta1.IngressConfig, client client.Client, isvcConfig *v1beta1.InferenceServicesConfig) (*netv1.Ingress, error) {
 	if !isvc.Status.IsConditionReady(v1beta1.PredictorReady) {
 		isvc.Status.SetCondition(v1beta1.IngressReady, &apis.Condition{
 			Type:   v1beta1.IngressReady,
@@ -180,16 +182,16 @@ func createRawIngress(scheme *runtime.Scheme, isvc *v1beta1.InferenceService,
 			predictorName = constants.DefaultPredictorServiceName(isvc.Name)
 			explainerName = constants.DefaultExplainerServiceName(isvc.Name)
 		}
-		host, err := generateIngressHost(ingressConfig, isvc, string(constants.Transformer), true, transformerName)
+		host, err := generateIngressHost(ingressConfig, isvc, string(constants.Transformer), true, transformerName, isvcConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating top level transformer ingress host: %w", err)
 		}
-		transformerHost, err := generateIngressHost(ingressConfig, isvc, string(constants.Transformer), false, transformerName)
+		transformerHost, err := generateIngressHost(ingressConfig, isvc, string(constants.Transformer), false, transformerName, isvcConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating transformer ingress host: %w", err)
 		}
 		if isvc.Spec.Explainer != nil {
-			explainerHost, err := generateIngressHost(ingressConfig, isvc, string(constants.Explainer), false, transformerName)
+			explainerHost, err := generateIngressHost(ingressConfig, isvc, string(constants.Explainer), false, transformerName, isvcConfig)
 			if err != nil {
 				return nil, fmt.Errorf("failed creating explainer ingress host: %w", err)
 			}
@@ -213,11 +215,11 @@ func createRawIngress(scheme *runtime.Scheme, isvc *v1beta1.InferenceService,
 			explainerName = constants.DefaultExplainerServiceName(isvc.Name)
 			predictorName = constants.DefaultPredictorServiceName(isvc.Name)
 		}
-		host, err := generateIngressHost(ingressConfig, isvc, string(constants.Explainer), true, explainerName)
+		host, err := generateIngressHost(ingressConfig, isvc, string(constants.Explainer), true, explainerName, isvcConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating top level explainer ingress host: %w", err)
 		}
-		explainerHost, err := generateIngressHost(ingressConfig, isvc, string(constants.Explainer), false, explainerName)
+		explainerHost, err := generateIngressHost(ingressConfig, isvc, string(constants.Explainer), false, explainerName, isvcConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating explainer ingress host: %w", err)
 		}
@@ -229,14 +231,14 @@ func createRawIngress(scheme *runtime.Scheme, isvc *v1beta1.InferenceService,
 		if err == nil {
 			predictorName = constants.DefaultPredictorServiceName(isvc.Name)
 		}
-		host, err := generateIngressHost(ingressConfig, isvc, string(constants.Predictor), true, predictorName)
+		host, err := generateIngressHost(ingressConfig, isvc, string(constants.Predictor), true, predictorName, isvcConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating top level predictor ingress host: %w", err)
 		}
 		rules = append(rules, generateRule(host, predictorName, "/", constants.CommonDefaultHttpPort))
 	}
 	// add predictor rule
-	predictorHost, err := generateIngressHost(ingressConfig, isvc, string(constants.Predictor), false, predictorName)
+	predictorHost, err := generateIngressHost(ingressConfig, isvc, string(constants.Predictor), false, predictorName, isvcConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating predictor ingress host: %w", err)
 	}
@@ -274,7 +276,7 @@ func (r *RawIngressReconciler) Reconcile(isvc *v1beta1.InferenceService) error {
 		isInternal = true
 	}
 	if !isInternal && !r.ingressConfig.DisableIngressCreation {
-		ingress, err := createRawIngress(r.scheme, isvc, r.ingressConfig, r.client)
+		ingress, err := createRawIngress(r.scheme, isvc, r.ingressConfig, r.client, r.isvcConfig)
 		if ingress == nil {
 			return nil
 		}
