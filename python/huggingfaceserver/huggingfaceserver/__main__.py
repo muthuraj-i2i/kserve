@@ -39,7 +39,6 @@ from . import (
     Backend,
 )
 from .vllm.utils import (
-    build_vllm_engine_args,
     infer_vllm_supported_from_model_architecture,
     maybe_add_vllm_cli_parser,
     vllm_available,
@@ -158,6 +157,7 @@ parser.add_argument(
     "\n\nDefault: Unlimited",
 )
 
+
 default_dtype = "float16" if torch.cuda.is_available() else "float32"
 if not vllm_available():
     dtype_choices = ["auto", "float16", "float32", "bfloat16", "float", "half"]
@@ -195,7 +195,6 @@ if "dtype" in args and args.dtype == "auto":
 def load_model():
     engine_args = None
     model_id_or_path = get_model_id_or_path(args)
-
     if args.disable_log_requests:
         request_logger = None
     else:
@@ -212,8 +211,9 @@ def load_model():
 
         args.model = args.model_id or args.model_dir
         args.revision = args.model_revision
-        engine_args = build_vllm_engine_args(args)
-        model = VLLMModel(args.model_name, engine_args, request_logger=request_logger)
+        model = VLLMModel(
+            args, request_logger=request_logger
+        )  # TODO: need more arguments ?
 
     else:
         kwargs = vars(args)
