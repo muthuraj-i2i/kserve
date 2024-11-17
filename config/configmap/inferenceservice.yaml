@@ -464,6 +464,15 @@ data:
          # Kubernetes modifies the filesystem group ID on the attached volume.
          "FSGroup": 1000
        }
+       
+     # ====================================== SECURITY CONFIGURATION ======================================
+     # Example
+       security: |-
+       {
+         # This configuration option specifies whether the service account token should be automatically mounted.
+         # Setting "autoMountServiceAccountToken" to true enables the automatic mounting of the service account token.
+         "autoMountServiceAccountToken": true
+       }
 
   explainers: |-
     {
