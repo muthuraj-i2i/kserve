@@ -24,6 +24,7 @@ export KSERVE_VERSION=v0.14.0
 export CERT_MANAGER_VERSION=v1.16.1
 SCRIPT_DIR="$(dirname -- "${BASH_SOURCE[0]}")"
 export SCRIPT_DIR
+export KEDA_VERSION=2.14.0
 
 uninstall() {
    helm uninstall --ignore-not-found kserve -n kserve
@@ -99,6 +100,19 @@ sleep 10
 # Wait for istio ingressgateway to be ready
 kubectl wait --for=condition=Ready pod -l app=istio-ingressgateway -n istio-system --timeout=600s
 echo "😀 Successfully installed Istio"
+
+Install KEDA
+helm repo add kedacore https://kedacore.github.io/charts
+helm install keda kedacore/keda --version ${KEDA_VERSION} --namespace keda --create-namespace --wait
+echo "😀 Successfully installed KEDA"
+
+helm upgrade -i kedify-otel oci://ghcr.io/kedify/charts/otel-add-on --version=v0.0.4
+echo "😀 Successfully installed Kedify OpenTelemetry add-on"
+
+helm repo add dapr https://dapr.github.io/helm-charts/
+helm repo update
+helm install dapr dapr/dapr --version=1.14 --namespace dapr-system --create-namespace --wait
+echo "😀 Successfully installed Dapr"
 
 # Install Cert Manager
 helm repo add jetstack https://charts.jetstack.io --force-update
