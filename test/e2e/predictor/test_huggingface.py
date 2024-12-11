@@ -290,6 +290,55 @@ def test_huggingface_openai_text_2_text():
 
 
 @pytest.mark.llm
+def test_huggingface_openai_text_embedding():
+    service_name = "hf-openai-text-embedding"
+    predictor = V1beta1PredictorSpec(
+        min_replicas=1,
+        model=V1beta1ModelSpec(
+            model_format=V1beta1ModelFormat(
+                name="huggingface",
+            ),
+            args=[
+                "--model_id",
+                "sentence-transformers/all-MiniLM-L6-v2",
+                "--backend",
+                "huggingface",
+                "--max_model_len",
+                "512",
+                "--task",
+                "text_embedding",
+            ],
+            resources=V1ResourceRequirements(
+                requests={"cpu": "1", "memory": "2Gi"},
+                limits={"cpu": "1", "memory": "4Gi"},
+            ),
+        ),
+    )
+
+    isvc = V1beta1InferenceService(
+        api_version=constants.KSERVE_V1BETA1,
+        kind=constants.KSERVE_KIND,
+        metadata=client.V1ObjectMeta(
+            name=service_name, namespace=KSERVE_TEST_NAMESPACE
+        ),
+        spec=V1beta1InferenceServiceSpec(predictor=predictor),
+    )
+
+    kserve_client = KServeClient(
+        config_file=os.environ.get("KUBECONFIG", "~/.kube/config")
+    )
+    # kserve_client.create(isvc)
+    kserve_client.wait_isvc_ready(service_name, namespace=KSERVE_TEST_NAMESPACE)
+
+    res = generate(
+        service_name, "./data/text_embedding_input_v2.json", task="text_embedding", chat_completions=False
+    )
+    assert res["choices"][0]["text"] == "Das ist für Deutschland"
+
+    # kserve_client.delete(service_name, KSERVE_TEST_NAMESPACE)
+
+
+@pytest.mark.llm
 @pytest.mark.asyncio(scope="session")
 async def test_huggingface_v2_text_embedding(rest_v2_client):
     service_name = "hf-text-embedding-v2"

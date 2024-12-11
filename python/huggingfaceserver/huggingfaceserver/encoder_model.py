@@ -40,14 +40,20 @@ from transformers import (
     PretrainedConfig,
     TensorType,
 )
-from kserve.utils import generate_uuid, LLMStats
+from kserve.utils.utils import generate_uuid
+from kserve.metrics import LLMStats
 from kserve.protocol.rest.openai.types import (
     EmbeddingRequest,
     Embedding,
-    EmbeddingResponseData,
+    EmbeddingData,
     UsageInfo, 
-    ErrorResponse
+    ErrorResponse,
+    ChatCompletion,
+    Completion,
+    ChatCompletionRequest,
+    CompletionRequest,
 )
+
 
 from kserve.protocol.rest.openai import OpenAIModel
 
@@ -402,7 +408,7 @@ class HuggingfaceEncoderModel(Model, OpenAIModel):  # pylint:disable=c-extension
             normalized_embeddings = F.normalize(embeddings, p=2, dim=1)
 
             data = [
-                EmbeddingResponseData(
+                EmbeddingData(
                     index=idx,
                     object="embedding",
                     embedding=embedding.tolist(),
@@ -425,3 +431,17 @@ class HuggingfaceEncoderModel(Model, OpenAIModel):  # pylint:disable=c-extension
         except Exception as e:
             logger.error(f"Error during embedding creation: {str(e)}")
             return ErrorResponse(message=str(e))
+
+    async def create_completion(
+        self,
+        request: CompletionRequest,
+        raw_request: Optional[Request] = None,
+    ) -> Union[AsyncGenerator[str, None], Completion, ErrorResponse]:
+        raise NotImplementedError("completion is not an EncoderModel")
+
+    async def create_chat_completion(
+        self,
+        request: ChatCompletionRequest,
+        raw_request: Optional[Request] = None,
+    ) -> Union[AsyncGenerator[str, None], ChatCompletion, ErrorResponse]:
+        raise NotImplementedError("chat completion is not an EncoderModel")

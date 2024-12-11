@@ -144,6 +144,7 @@ class OpenAIEndpoints:
         Returns:
             InferenceResponse: Inference response object.
         """
+        print("=-=-=-=-=-=-=-=-=-=")
         try:
             params = EmbeddingRequestAdapter.validate_python(request_body)
         except ValidationError as e:

@@ -52,6 +52,9 @@ from kserve.protocol.rest.openai.types.openapi import (
 from kserve.protocol.rest.openai.types.openapi import (
     ChatCompletionLogProbs as ChatCompletionChoiceLogProbs,
 )
+from kserve.protocol.rest.openai.types.openapi import (
+    EmbeddingResponseData as EmbeddingData,
+)
 
 
 __all__ = [

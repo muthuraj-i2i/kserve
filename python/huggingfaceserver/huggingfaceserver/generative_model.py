@@ -50,6 +50,8 @@ from kserve.protocol.rest.openai.types import (
     CompletionChoice,
     ErrorResponse,
     ChatCompletionRequest,
+    EmbeddingRequest,
+    Embedding,
 )
 
 from kserve.utils.utils import generate_uuid
@@ -745,3 +747,11 @@ class HuggingfaceGenerativeModel(
                 prompt_token_ids=request.prompt if is_prompt_token else None,
                 params=request.model_dump(exclude={"prompt"}),
             )
+
+
+    async def create_embedding(
+        self, 
+        request: EmbeddingRequest, 
+        raw_request: Optional[Request] = None,
+    ) -> Union[AsyncGenerator[str, None], Embedding, ErrorResponse]:
+        raise NotImplementedError("embedding is not an GenerativeModel")
