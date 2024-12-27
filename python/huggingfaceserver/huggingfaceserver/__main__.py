@@ -193,7 +193,6 @@ if "dtype" in args and args.dtype == "auto":
 
 
 def load_model():
-    engine_args = None
     model_id_or_path = get_model_id_or_path(args)
     if args.disable_log_requests:
         request_logger = None
