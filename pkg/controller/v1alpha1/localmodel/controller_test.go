@@ -18,6 +18,8 @@ package localmodel
 
 import (
 	"context"
+	"time"
+
 	"github.com/kserve/kserve/pkg/apis/serving/v1alpha1"
 	"github.com/kserve/kserve/pkg/apis/serving/v1beta1"
 	"github.com/kserve/kserve/pkg/constants"
@@ -33,7 +35,6 @@ import (
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"time"
 )
 
 var _ = Describe("CachedModel controller", func() {
