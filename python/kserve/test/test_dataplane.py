@@ -28,15 +28,21 @@ from cloudevents.conversion import to_binary, to_structured
 from cloudevents.http import CloudEvent
 from ray import serve
 from kserve.protocol.rest.openai.types.openapi import (
-    CreateChatCompletionResponse as ChatCompletion,
-    CreateChatCompletionStreamResponse as ChatCompletionChunk,
-    CreateCompletionResponse as Completion,
+    ChatCompletionResponse as ChatCompletion,
+    ChatCompletionStreamResponse as ChatCompletionChunk,
+    CompletionResponse as Completion,
 )
-from typing import AsyncIterator, Union
+from typing import AsyncIterator, Union, Optional, AsyncGenerator
 from kserve.errors import InvalidInput, ModelNotFound
 from kserve.model import PredictorProtocol, PredictorConfig
 from kserve.protocol.dataplane import DataPlane
-from kserve.protocol.rest.openai import CompletionRequest, OpenAIModel
+from kserve.protocol.rest.openai.types import (
+    CompletionRequest,
+    EmbeddingRequest,
+    Embedding,
+    ErrorResponse,
+)
+from kserve.protocol.rest.openai import OpenAIModel
 from kserve.model_repository import ModelRepository
 from kserve.ray import RayModel
 from test.test_server import (
@@ -46,6 +52,7 @@ from test.test_server import (
     DummyAvroCEModel,
     DummyServeModel,
 )
+from fastapi import Request
 
 
 @pytest.mark.asyncio
@@ -425,13 +432,24 @@ class TestDataPlaneOpenAI:
 
     class DummyOpenAIModel(OpenAIModel):
         async def create_completion(
-            self, params: CompletionRequest
+            self,
+            params: CompletionRequest,
+            raw_request: Optional[Request] = None,
         ) -> Union[Completion, AsyncIterator[Completion]]:
             pass
 
         async def create_chat_completion(
-            self, params: CompletionRequest
+            self,
+            params: CompletionRequest,
+            raw_request: Optional[Request] = None,
         ) -> Union[ChatCompletion, AsyncIterator[ChatCompletionChunk]]:
+            pass
+
+        async def create_embedding(
+            self,
+            request: EmbeddingRequest,
+            raw_request: Optional[Request] = None,
+        ) -> Union[AsyncGenerator[str, None], Embedding, ErrorResponse]:
             pass
 
     async def test_infer_on_openai_model_raises(self):

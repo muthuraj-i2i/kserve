@@ -308,6 +308,7 @@ def generate(
     input_json,
     version=constants.KSERVE_V1BETA1_VERSION,
     chat_completions=True,
+    task: Union[str, None] = None,
 ):
     with open(input_json) as json_file:
         data = json.load(json_file)
@@ -323,7 +324,9 @@ def generate(
         scheme, cluster_ip, host, path = get_isvc_endpoint(isvc)
         headers = {"Host": host, "Content-Type": "application/json"}
 
-        if chat_completions:
+        if task and task == "text_embedding":
+            url = f"{scheme}://{cluster_ip}{path}/openai/v1/embeddings"
+        elif chat_completions:
             url = f"{scheme}://{cluster_ip}{path}/openai/v1/chat/completions"
         else:
             url = f"{scheme}://{cluster_ip}{path}/openai/v1/completions"
