@@ -167,7 +167,7 @@ class OpenAIEndpoints:
             return StreamingResponse(embedding, media_type="text/event-stream")
         else:
             return embedding
-        
+
     async def models(
         self,
     ) -> ListModelsResponse:

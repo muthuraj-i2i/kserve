@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import pathlib
-from typing import Any, Dict, Optional, Union, AsyncGenerator, Union
+from typing import Any, Dict, Optional, Union, AsyncGenerator
 import time
 from fastapi import Request
 import torch
@@ -46,7 +46,7 @@ from kserve.protocol.rest.openai.types import (
     EmbeddingRequest,
     Embedding,
     EmbeddingData,
-    UsageInfo, 
+    UsageInfo,
     ErrorResponse,
     ChatCompletion,
     Completion,
@@ -360,12 +360,12 @@ class HuggingfaceEncoderModel(Model, OpenAIModel):  # pylint:disable=c-extension
             )
 
     async def create_embedding(
-        self, 
-        request: EmbeddingRequest, 
+        self,
+        request: EmbeddingRequest,
         raw_request: Optional[Request] = None,
     ) -> Union[AsyncGenerator[str, None], Embedding, ErrorResponse]:
         self._log_request(request, raw_request)
-        
+
         input = request.input  # Extract the input field
         prompts = (
             input

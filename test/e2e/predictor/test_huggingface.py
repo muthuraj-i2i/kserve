@@ -327,11 +327,14 @@ def test_huggingface_openai_text_embedding():
     kserve_client = KServeClient(
         config_file=os.environ.get("KUBECONFIG", "~/.kube/config")
     )
-    # kserve_client.create(isvc)
+    kserve_client.create(isvc)
     kserve_client.wait_isvc_ready(service_name, namespace=KSERVE_TEST_NAMESPACE)
 
     res = generate(
-        service_name, "./data/text_embedding_input_v2.json", task="text_embedding", chat_completions=False
+        service_name,
+        "./data/text_embedding_input_v2.json",
+        task="text_embedding",
+        chat_completions=False,
     )
     assert res["choices"][0]["text"] == "Das ist für Deutschland"
 

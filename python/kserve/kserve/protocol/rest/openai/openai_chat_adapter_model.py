@@ -15,7 +15,6 @@
 from abc import abstractmethod
 from typing import Iterable, Optional, cast, AsyncGenerator, Union
 from fastapi import Request
-import time
 
 from kserve.protocol.rest.openai.types import (
     ChatCompletionRequest,

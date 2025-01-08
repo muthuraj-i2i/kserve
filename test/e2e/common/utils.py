@@ -308,7 +308,7 @@ def generate(
     input_json,
     version=constants.KSERVE_V1BETA1_VERSION,
     chat_completions=True,
-    task: Union[str, None] = None
+    task: Union[str, None] = None,
 ):
     with open(input_json) as json_file:
         data = json.load(json_file)

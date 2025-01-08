@@ -748,10 +748,9 @@ class HuggingfaceGenerativeModel(
                 params=request.model_dump(exclude={"prompt"}),
             )
 
-
     async def create_embedding(
-        self, 
-        request: EmbeddingRequest, 
+        self,
+        request: EmbeddingRequest,
         raw_request: Optional[Request] = None,
     ) -> Union[AsyncGenerator[str, None], Embedding, ErrorResponse]:
         raise NotImplementedError("embedding is not an GenerativeModel")

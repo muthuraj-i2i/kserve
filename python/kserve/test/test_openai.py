@@ -42,6 +42,8 @@ from kserve.protocol.rest.openai.types import (
     Completion,
     ChatCompletion,
     ChatCompletionMessageParam,
+    EmbeddingRequest,
+    Embedding,
     ErrorResponse,
     ChatCompletionChunk,
 )
@@ -110,6 +112,13 @@ class DummyModel(OpenAIChatAdapterModel):
         tools: Optional[List[ChatCompletionTool]] = None,
     ) -> ChatPrompt:
         return ChatPrompt(prompt="hello")
+
+    async def create_embedding(
+        self,
+        request: EmbeddingRequest,
+        raw_request: Optional[Request] = None,
+    ) -> Union[AsyncGenerator[str, None], Embedding, ErrorResponse]:
+        pass
 
 
 @pytest.fixture
