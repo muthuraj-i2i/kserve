@@ -67,7 +67,9 @@ from .task import (
 from .utils import _get_and_verify_max_len, _mean_pooling
 
 
-class HuggingfaceEncoderModel(Model, OpenAIModel):  # pylint:disable=c-extension-no-member
+class HuggingfaceEncoderModel(
+    Model, OpenAIModel
+):  # pylint:disable=c-extension-no-member
     task: MLTask
     model_config: PretrainedConfig
     model_id_or_path: Union[pathlib.Path, str]
@@ -397,7 +399,9 @@ class HuggingfaceEncoderModel(Model, OpenAIModel):  # pylint:disable=c-extension
             # TODO: check if this is correct
             # Perform mean pooling
             if attention_mask is not None:
-                expanded_mask = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+                expanded_mask = (
+                    attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+                )
                 sum_embeddings = torch.sum(token_embeddings * expanded_mask, dim=1)
                 sum_mask = torch.clamp(expanded_mask.sum(dim=1), min=1e-9)
                 embeddings = sum_embeddings / sum_mask
