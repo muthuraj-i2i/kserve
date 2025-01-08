@@ -8069,7 +8069,6 @@ spec:
                     - memory
                     - concurrency
                     - rps
-                    - prometheus
                     type: string
                   scaleMetricType:
                     type: string
@@ -8081,11 +8080,8 @@ spec:
                         type: integer
                       metricBackend:
                         enum:
-                        - cpu
-                        - memory
-                        - concurrency
-                        - rps
                         - prometheus
+                        - graphite
                         type: string
                       metricQuery:
                         type: string
@@ -8101,7 +8097,6 @@ spec:
                         - memory
                         - concurrency
                         - rps
-                        - prometheus
                         type: string
                       scaleMetricType:
                         type: string
@@ -15845,7 +15840,6 @@ spec:
                     - memory
                     - concurrency
                     - rps
-                    - prometheus
                     type: string
                   scaleMetricType:
                     type: string
@@ -15857,11 +15851,8 @@ spec:
                         type: integer
                       metricBackend:
                         enum:
-                        - cpu
-                        - memory
-                        - concurrency
-                        - rps
                         - prometheus
+                        - graphite
                         type: string
                       metricQuery:
                         type: string
@@ -15877,7 +15868,6 @@ spec:
                         - memory
                         - concurrency
                         - rps
-                        - prometheus
                         type: string
                       scaleMetricType:
                         type: string
@@ -25105,7 +25095,6 @@ spec:
                     - memory
                     - concurrency
                     - rps
-                    - prometheus
                     type: string
                   scaleMetricType:
                     type: string
@@ -25117,11 +25106,8 @@ spec:
                         type: integer
                       metricBackend:
                         enum:
-                        - cpu
-                        - memory
-                        - concurrency
-                        - rps
                         - prometheus
+                        - graphite
                         type: string
                       metricQuery:
                         type: string
@@ -25137,7 +25123,6 @@ spec:
                         - memory
                         - concurrency
                         - rps
-                        - prometheus
                         type: string
                       scaleMetricType:
                         type: string
