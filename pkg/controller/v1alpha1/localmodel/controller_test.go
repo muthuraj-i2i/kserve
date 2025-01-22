@@ -219,7 +219,7 @@ var _ = Describe("CachedModel controller", func() {
 
 		It("Should create pvs and pvcs for inference services", func() {
 			defer GinkgoRecover()
-			modelName := "iris2"
+			modelName := "iris"
 			isvcNamespace := "default"
 			isvcName := "foo"
 			cachedModel := &v1alpha1.LocalModelCache{
