@@ -71,7 +71,7 @@ class TestV1beta1MetricsSpec(unittest.TestCase):
                         average_utilization=56,
                         average_value=None,
                         type="0",
-                        value=None,                    / 
+                        value=None,
                     ),
                 ),
                 type="0",
