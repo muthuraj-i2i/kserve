@@ -200,6 +200,7 @@ type ExternalMetricSource struct {
 // MetricTarget defines the target value, average value, or average utilization of a specific metric
 type MetricTarget struct {
 	// type represents whether the metric type is Utilization, Value, or AverageValue
+	// +optional
 	Type MetricTargetType `json:"type"`
 
 	// value is the target value of the metric (as a quantity).

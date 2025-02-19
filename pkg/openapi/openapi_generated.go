@@ -6292,7 +6292,6 @@ func schema_pkg_apis_serving_v1beta1_MetricTarget(ref common.ReferenceCallback) 
 						},
 					},
 				},
-				Required: []string{"type"},
 			},
 		},
 		Dependencies: []string{
