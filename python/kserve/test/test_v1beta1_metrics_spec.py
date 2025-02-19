@@ -33,6 +33,7 @@ import kserve
 from kserve.models.v1beta1_metrics_spec import V1beta1MetricsSpec  # noqa: E501
 from kserve.rest import ApiException
 
+
 class TestV1beta1MetricsSpec(unittest.TestCase):
     """V1beta1MetricsSpec unit test stubs"""
 
@@ -44,35 +45,44 @@ class TestV1beta1MetricsSpec(unittest.TestCase):
 
     def make_instance(self, include_optional):
         """Test V1beta1MetricsSpec
-            include_option is a boolean, when False only required
-            params are included, when True both required and
-            optional params are included """
+        include_option is a boolean, when False only required
+        params are included, when True both required and
+        optional params are included"""
         # model = kserve.models.v1beta1_metrics_spec.V1beta1MetricsSpec()  # noqa: E501
-        if include_optional :
+        if include_optional:
             return V1beta1MetricsSpec(
-                external = kserve.models.v1beta1/external_metric_source.v1beta1.ExternalMetricSource(
-                    metric = kserve.models.v1beta1/metric_source.v1beta1.MetricSource(
-                        backend = '0', 
-                        namespace = '0', 
-                        query = '0', 
-                        server_address = '0', ), 
-                    target = kserve.models.v1beta1/metric_target.v1beta1.MetricTarget(
-                        average_utilization = 56, 
-                        average_value = None, 
-                        type = '0', 
-                        value = None, ), ), 
-                resource = kserve.models.v1beta1/resource_metric_source.v1beta1.ResourceMetricSource(
-                    name = '0', 
-                    target = kserve.models.v1beta1/metric_target.v1beta1.MetricTarget(
-                        average_utilization = 56, 
-                        average_value = None, 
-                        type = '0', 
-                        value = None, ), ), 
-                type = '0'
+                external=kserve.models.v1beta1
+                / external_metric_source.v1beta1.ExternalMetricSource(
+                    metric=kserve.models.v1beta1
+                    / metric_source.v1beta1.MetricSource(
+                        backend="0",
+                        namespace="0",
+                        query="0",
+                        server_address="0",
+                    ),
+                    target=kserve.models.v1beta1
+                    / metric_target.v1beta1.MetricTarget(
+                        average_utilization=56,
+                        average_value=None,
+                        type="0",
+                        value=None,
+                    ),
+                ),
+                resource=kserve.models.v1beta1
+                / resource_metric_source.v1beta1.ResourceMetricSource(
+                    name="0",
+                    target=kserve.models.v1beta1
+                    / metric_target.v1beta1.MetricTarget(
+                        average_utilization=56,
+                        average_value=None,
+                        type="0",
+                        value=None,
+                    ),
+                ),
+                type="0",
             )
-        else :
-            return V1beta1MetricsSpec(
-        )
+        else:
+            return V1beta1MetricsSpec()
 
     def testV1beta1MetricsSpec(self):
         """Test V1beta1MetricsSpec"""
@@ -80,5 +90,5 @@ class TestV1beta1MetricsSpec(unittest.TestCase):
         inst_req_and_optional = self.make_instance(include_optional=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
