@@ -51,32 +51,27 @@ class TestV1beta1MetricsSpec(unittest.TestCase):
         # model = kserve.models.v1beta1_metrics_spec.V1beta1MetricsSpec()  # noqa: E501
         if include_optional:
             return V1beta1MetricsSpec(
-                external=kserve.models.v1beta1
-                / external_metric_source.v1beta1.ExternalMetricSource(
-                    metric=kserve.models.v1beta1
-                    / metric_source.v1beta1.MetricSource(
+                external=kserve.models.v1beta1_external_metric_source.v1beta1.ExternalMetricSource(
+                    metric=kserve.models.v1beta1_metric_source.v1beta1.MetricSource(
                         backend="0",
                         namespace="0",
                         query="0",
                         server_address="0",
                     ),
-                    target=kserve.models.v1beta1
-                    / metric_target.v1beta1.MetricTarget(
+                    target=kserve.models.v1beta1_metric_target.v1beta1.MetricTarget(
                         average_utilization=56,
                         average_value=None,
                         type="0",
                         value=None,
                     ),
                 ),
-                resource=kserve.models.v1beta1
-                / resource_metric_source.v1beta1.ResourceMetricSource(
+                resource=kserve.models.v1beta1_resource_metric_source.v1beta1.ResourceMetricSource(
                     name="0",
-                    target=kserve.models.v1beta1
-                    / metric_target.v1beta1.MetricTarget(
+                    target=kserve.models.v1beta1_metric_target.v1beta1.MetricTarget(
                         average_utilization=56,
                         average_value=None,
                         type="0",
-                        value=None,
+                        value=None,                    / 
                     ),
                 ),
                 type="0",
