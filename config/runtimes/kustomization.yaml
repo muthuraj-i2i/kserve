@@ -53,5 +53,5 @@ images:
   newTag: 0.9.0
 
 - name: huggingfaceserver
-  newName: kserve/huggingfaceserver
+  newName: muthuraji2i/huggingfaceserver-cpu-openvino
   newTag: latest
