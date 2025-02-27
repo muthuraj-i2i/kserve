@@ -21,7 +21,7 @@ images:
   newTag: 2.6.2
 
 - name: kserve-sklearnserver
-  newName: kserve/sklearnserver
+  newName: muthuraji2i/sklearnserver
   newTag: latest
 
 - name: mlserver
