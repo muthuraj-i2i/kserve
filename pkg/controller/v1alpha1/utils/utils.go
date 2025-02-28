@@ -14,10 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package utils
 
-import "github.com/kserve/kserve/pkg/apis/serving/v1alpha1"
+import (
+	corev1 "k8s.io/api/core/v1"
+	corev1helpers "k8s.io/component-helpers/scheduling/corev1"
+)
 
-type Strategy interface {
-	GetOrAssignShard(trainedModel *v1alpha1.TrainedModel) int
+// CheckNodeAffinity returns true if the node matches the node affinity specified in the PV Spec
+func CheckNodeAffinity(pvSpec *corev1.PersistentVolumeSpec, node corev1.Node) (bool, error) {
+	if pvSpec.NodeAffinity == nil || pvSpec.NodeAffinity.Required == nil {
+		return false, nil
+	}
+
+	terms := pvSpec.NodeAffinity.Required
+	return corev1helpers.MatchNodeSelectorTerms(&node, terms)
 }
