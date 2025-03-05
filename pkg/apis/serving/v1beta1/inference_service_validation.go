@@ -262,14 +262,10 @@ func validateInferenceServiceAutoscaler(isvc *InferenceService) error {
 							switch autoScalingType {
 							case MetricSourceType(constants.AutoScalerResource):
 								resourceName := autoScaling.Resource.Name
-								if err := validateKEDAMetrics(*resourceName); err != nil {
-									return err
-								}
+								return validateKEDAMetrics(*resourceName)
 							case MetricSourceType(constants.AutoScalerExternal):
 								metricBackend := autoScaling.External.Metric.Backend
-								if err := validateKEDAMetricBackends(*metricBackend); err != nil {
-									return err
-								}
+								return validateKEDAMetricBackends(*metricBackend)
 							default:
 								return fmt.Errorf("unknown auto scaling type class [%s] with value [%s]."+
 									"Valid types are Resource and External", class, autoScalingType)
@@ -299,6 +295,7 @@ func validateKEDAMetrics(metric ScaleMetric) error {
 
 // Validate of autoscaler KEDA metrics
 func validateKEDAMetricBackends(backend MetricsBackend) error {
+	println("---------------------------------------", backend)
 	if slices.Contains(constants.AutoscalerAllowedKEDAMetricBackendList, constants.AutoscalerMetricsType(backend)) {
 		return nil
 	}

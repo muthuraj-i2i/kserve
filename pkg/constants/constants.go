@@ -194,10 +194,11 @@ var (
 
 // Autoscaler Metrics
 var (
-	AutoScalerMetricsCPU        AutoscalerMetricsType = "cpu"
-	AutoScalerMetricsMemory     AutoscalerMetricsType = "memory"
-	AutoScalerMetricsPrometheus AutoscalerMetricsType = "prometheus"
-	AutoScalerMetricsGraphite   AutoscalerMetricsType = "graphite"
+	AutoScalerMetricsCPU           AutoscalerMetricsType = "cpu"
+	AutoScalerMetricsMemory        AutoscalerMetricsType = "memory"
+	AutoScalerMetricsPrometheus    AutoscalerMetricsType = "prometheus"
+	AutoScalerMetricsGraphite      AutoscalerMetricsType = "graphite"
+	AutoScalerMetricsOpenTelemetry AutoscalerMetricsType = "opentelemetry"
 )
 
 var (
@@ -233,6 +234,7 @@ var AutoscalerAllowedKEDAMetricsList = []AutoscalerMetricsType{
 var AutoscalerAllowedKEDAMetricBackendList = []AutoscalerMetricsType{
 	AutoScalerMetricsPrometheus,
 	AutoScalerMetricsGraphite,
+	AutoScalerMetricsOpenTelemetry,
 }
 
 // Autoscaler Default Metrics Value
