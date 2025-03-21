@@ -264,7 +264,10 @@ func validateInferenceServiceAutoscaler(isvc *InferenceService) error {
 								return validateKEDAMetrics(*resourceName)
 							case MetricSourceType(constants.AutoScalerExternal):
 								metricBackend := autoScaling.External.Metric.Backend
-								return validateKEDAMetricBackends(*metricBackend)
+								return validateKEDAExternalMetricBackends(*metricBackend)
+							case MetricSourceType(constants.AutoScalerPodMetric):
+								metricBackend := autoScaling.External.Metric.Backend
+								return validateKEDAPodMetricBackends(*metricBackend)
 							default:
 								return fmt.Errorf("unknown auto scaling type class [%s] with value [%s]."+
 									"Valid types are Resource and External", class, autoScalingType)
@@ -292,9 +295,17 @@ func validateKEDAMetrics(metric ScaleMetric) error {
 	return fmt.Errorf("[%s] is not a supported metric in KEDA.\n", metric)
 }
 
-// Validate of autoscaler KEDA metrics
-func validateKEDAMetricBackends(backend MetricsBackend) error {
-	if slices.Contains(constants.AutoscalerAllowedKEDAMetricBackendList, constants.AutoscalerMetricsType(backend)) {
+// Validate of autoscaler KEDA External metrics
+func validateKEDAExternalMetricBackends(backend MetricsBackend) error {
+	if slices.Contains(constants.AutoscalerAllowedKEDAExternalMetricBackendList, constants.AutoscalerMetricsType(backend)) {
+		return nil
+	}
+	return fmt.Errorf("[%s] is not a supported metric backend in KEDA.\n", backend)
+}
+
+// Validate of autoscaler KEDA Pod metrics
+func validateKEDAPodMetricBackends(backend MetricsBackend) error {
+	if slices.Contains(constants.AutoscalerAllowedKEDAPodMetricBackendList, constants.AutoscalerMetricsType(backend)) {
 		return nil
 	}
 	return fmt.Errorf("[%s] is not a supported metric backend in KEDA.\n", backend)

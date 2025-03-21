@@ -82,7 +82,7 @@ func createOtelCollector(componentMeta metav1.ObjectMeta,
 									"scrape_interval": otelConfig.ScrapeInterval,
 									"static_configs": []interface{}{
 										map[string]interface{}{
-											"targets": []interface{}{"localhost:8080"},
+											"targets": []interface{}{"0.0.0.0:8080"},
 										},
 									},
 								},
@@ -95,7 +95,7 @@ func createOtelCollector(componentMeta metav1.ObjectMeta,
 						"error_mode": "ignore",
 						"metrics": map[string]interface{}{
 							"metric": []interface{}{
-								fmt.Sprintf(`name == "%s"`, metricQuery),
+								fmt.Sprintf(`type != "%s"`, metricQuery),
 							},
 						},
 					},

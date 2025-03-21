@@ -207,7 +207,7 @@ var (
 var (
 	AutoScalerResource  AutoScalerType = "Resource"
 	AutoScalerExternal  AutoScalerType = "External"
-	AutoScalerPodMetric AutoScalerType = "Pods"
+	AutoScalerPodMetric AutoScalerType = "PodMetric"
 )
 
 // Autoscaler Class Allowed List
@@ -235,9 +235,12 @@ var AutoscalerAllowedKEDAMetricsList = []AutoscalerMetricsType{
 	AutoScalerMetricsMemory,
 }
 
-var AutoscalerAllowedKEDAMetricBackendList = []AutoscalerMetricsType{
+var AutoscalerAllowedKEDAExternalMetricBackendList = []AutoscalerMetricsType{
 	AutoScalerMetricsPrometheus,
 	AutoScalerMetricsGraphite,
+}
+
+var AutoscalerAllowedKEDAPodMetricBackendList = []AutoscalerMetricsType{
 	AutoScalerMetricsOpenTelemetry,
 }
 
