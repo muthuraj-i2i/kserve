@@ -153,6 +153,12 @@ func createHPA(componentMeta metav1.ObjectMeta,
 		maxReplicas = minReplicas
 	}
 	metrics := getHPAMetrics(componentExt)
+
+	if componentMeta.Annotations == nil {
+		componentMeta.Annotations = make(map[string]string)
+	}
+	componentMeta.Annotations[constants.AutoscalerClass] = string(constants.AutoscalerClassHPA)
+
 	hpa := &autoscalingv2.HorizontalPodAutoscaler{
 		ObjectMeta: componentMeta,
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
