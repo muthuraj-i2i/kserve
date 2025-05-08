@@ -127,6 +127,7 @@ generate: controller-gen helm-docs
 # Update poetry.lock files
 poetry-lock: $(POETRY)
 # Update the kserve package first as other packages depends on it.
+	@echo "Entering ./python directory"
 	cd ./python && \
 	cd kserve && $(POETRY) lock --no-update && cd .. && \
 	for file in $$(find . -type f -name "pyproject.toml" -not -path "./pyproject.toml" -not -path "*.venv/*"); do \
