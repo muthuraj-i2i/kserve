@@ -126,6 +126,8 @@ generate: controller-gen helm-docs
 
 # Update poetry.lock files
 poetry-lock: $(POETRY)
+# Upgrade poetry and virtualenv before locking
+	pip install --upgrade poetry virtualenv
 # Update the kserve package first as other packages depends on it.
 	cd ./python && \
 	echo "Entering kserve directory to update poetry.lock" && \
