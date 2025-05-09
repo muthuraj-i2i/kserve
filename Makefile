@@ -128,7 +128,6 @@ generate: controller-gen helm-docs
 poetry-lock: $(POETRY)
 # Upgrade poetry and virtualenv before locking
 	pip install -U virtualenv
-	env | grep -i virtualenv
 	which virtualenv
 	virtualenv --version
 # Update the kserve package first as other packages depends on it.
