@@ -35,13 +35,13 @@ jobs:
       # coverage profile to a file. You will need the name of the file (e.g. "coverage.txt")
       # in the next step as well as the next job.
       - name: Test
-        run: go test -cover -coverprofile=coverage.txt ./pkg/...
+        run: make test
 
       - name: Archive code coverage results
         uses: actions/upload-artifact@v4
         with:
           name: code-coverage
-          path: coverage.txt # Make sure to use the same file name you chose for the "-coverprofile" in the "Test" step
+          path: coverage.out # Make sure to use the same file name you chose for the "-coverprofile" in the "Test" step
 
   code_coverage:
     name: "Code coverage report"
