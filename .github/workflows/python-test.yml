@@ -72,7 +72,9 @@ jobs:
           cd python
           source kserve/.venv/bin/activate
           # pytest --cov=kserve ./kserve
-          pytest --cov=kserve --cov-append --cov-report=term --cov-report=xml:/mnt/coverage.xml ./kserve
+          mkdir -p /mnt/python/coverage
+          sudo chown -R $USER /mnt/python/coverage
+          pytest --cov=kserve --cov-append --cov-report=term --cov-report=xml:/mnt/python/coverage/kserve.xml ./kserve
           
 
       # ----------------------------------------Kserve Pydantic V1 Unit Tests--------------------------------------------
