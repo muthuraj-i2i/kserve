@@ -71,7 +71,9 @@ jobs:
         run: |
           cd python
           source kserve/.venv/bin/activate
-          pytest --cov=kserve ./kserve
+          # pytest --cov=kserve ./kserve
+          pytest --cov=kserve --cov-append --cov-report=term --cov-report=xml:/mnt/coverage.xml ./kserve
+          
 
       # ----------------------------------------Kserve Pydantic V1 Unit Tests--------------------------------------------
       - name: Setup kserve pydantic v1 directory
