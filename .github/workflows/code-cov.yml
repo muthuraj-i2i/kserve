@@ -23,7 +23,7 @@ jobs:
         coverage-threshold: 80
 
         # collect coverage for all packages beyond the one under test
-        cover-pkg: ./...
+        cover-pkg: ./pkg/...
 
         # Ignore code-generated files when calculating coverage totals
         ignore-pattern: |
