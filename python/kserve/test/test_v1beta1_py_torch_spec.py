@@ -82,7 +82,7 @@ class TestV1beta1PyTorchSpec(unittest.TestCase):
                 startup_probe = None, 
                 stdin = True, 
                 stdin_once = True, 
-                storage = kserve.models.v1beta1_storage_spec.v1beta1.StorageSpec(
+                storage = kserve.models.v1beta1_storage_spec.V1beta1StorageSpec(
                     key = '0', 
                     parameters = {
                         'key' : '0'
