@@ -36,7 +36,7 @@ async def test_transformer(rest_v1_client):
     predictor = V1beta1PredictorSpec(
         min_replicas=1,
         pytorch=V1beta1PyTorchSpec(
-            storage_uri="gs://kfserving-examples/models/torchserve/image_classifier/v1",
+            storage_uri="gs://kfserving-examples/models/torchscript",
             protocol_version="v1",
             resources=V1ResourceRequirements(
                 requests={"cpu": "10m", "memory": "128Mi"},
@@ -58,7 +58,7 @@ async def test_transformer(rest_v1_client):
                 env=[
                     V1EnvVar(
                         name="STORAGE_URI",
-                        value="gs://kfserving-examples/models/torchserve/image_classifier/v1",
+                        value="gs://kfserving-examples/models/torchscript",
                     )
                 ],
             )

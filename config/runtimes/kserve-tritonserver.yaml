@@ -25,11 +25,13 @@ spec:
       priority: 1
     - name: pytorch
       version: "1"
+      autoSelect: true
     - name: triton
       version: "2"
       autoSelect: true
       priority: 1
   protocolVersions:
+    - v1
     - v2
     - grpc-v2
   containers:
