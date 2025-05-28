@@ -132,38 +132,6 @@ func SetObjectDefaults_InferenceService(in *InferenceService) {
 			}
 		}
 	}
-	if in.Spec.Predictor.PyTorch != nil {
-		for i := range in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.Ports {
-			a := &in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.Ports[i]
-			if a.Protocol == "" {
-				a.Protocol = "TCP"
-			}
-		}
-		if in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.LivenessProbe != nil {
-			if in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.LivenessProbe.ProbeHandler.GRPC != nil {
-				if in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.LivenessProbe.ProbeHandler.GRPC.Service == nil {
-					var ptrVar1 string = ""
-					in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.LivenessProbe.ProbeHandler.GRPC.Service = &ptrVar1
-				}
-			}
-		}
-		if in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.ReadinessProbe != nil {
-			if in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.ReadinessProbe.ProbeHandler.GRPC != nil {
-				if in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.ReadinessProbe.ProbeHandler.GRPC.Service == nil {
-					var ptrVar1 string = ""
-					in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.ReadinessProbe.ProbeHandler.GRPC.Service = &ptrVar1
-				}
-			}
-		}
-		if in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.StartupProbe != nil {
-			if in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.StartupProbe.ProbeHandler.GRPC != nil {
-				if in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.StartupProbe.ProbeHandler.GRPC.Service == nil {
-					var ptrVar1 string = ""
-					in.Spec.Predictor.PyTorch.PredictorExtensionSpec.Container.StartupProbe.ProbeHandler.GRPC.Service = &ptrVar1
-				}
-			}
-		}
-	}
 	if in.Spec.Predictor.Triton != nil {
 		for i := range in.Spec.Predictor.Triton.PredictorExtensionSpec.Container.Ports {
 			a := &in.Spec.Predictor.Triton.PredictorExtensionSpec.Container.Ports[i]

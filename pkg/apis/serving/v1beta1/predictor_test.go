@@ -33,9 +33,9 @@ func TestGetImplementations(t *testing.T) {
 		expectedLength int
 	}{
 		{
-			name: "Single implementation - PyTorch",
+			name: "Single implementation - Triton",
 			predictorSpec: &PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				Triton: &TritonSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						RuntimeVersion: ptr.To("0.4.1"),
 					},
@@ -44,9 +44,9 @@ func TestGetImplementations(t *testing.T) {
 			expectedLength: 1,
 		},
 		{
-			name: "Pytorch with transformer container",
+			name: "Triton with transformer container",
 			predictorSpec: &PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				Triton: &TritonSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						RuntimeVersion: ptr.To("0.4.1"),
 					},
@@ -62,9 +62,9 @@ func TestGetImplementations(t *testing.T) {
 			expectedLength: 1,
 		},
 		{
-			name: "Multiple implementations - PyTorch and Tensorflow",
+			name: "Multiple implementations - Triton and Tensorflow",
 			predictorSpec: &PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				Triton: &TritonSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						RuntimeVersion: ptr.To("0.4.1"),
 					},
