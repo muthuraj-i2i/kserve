@@ -389,19 +389,6 @@ kserve:
         capabilities:
           drop:
             - ALL
-    torchserve:
-      image: pytorch/torchserve-kfs
-      tag: 0.9.0
-      serviceEnvelopePlaceholder: "{{.Labels.serviceEnvelope}}"
-      imagePullSecrets: []
-      securityContext:
-        runAsUser: 1000 # User ID is not defined in the Dockerfile, so we need to set it here to run as non-root
-        allowPrivilegeEscalation: false
-        privileged: false
-        runAsNonRoot: true
-        capabilities:
-          drop:
-            - ALL
     art:
       image: kserve/art-explainer
       defaultVersion: *defaultVersion
