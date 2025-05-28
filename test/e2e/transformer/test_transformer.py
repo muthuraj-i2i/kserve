@@ -18,7 +18,7 @@ from kserve import KServeClient
 from kserve import constants
 from kserve import V1beta1PredictorSpec
 from kserve import V1beta1TransformerSpec
-from kserve import V1beta1TorchServeSpec
+from kserve import V1beta1PyTorchSpec
 from kserve import V1beta1InferenceServiceSpec
 from kserve import V1beta1InferenceService
 from kubernetes.client import V1ResourceRequirements
@@ -35,7 +35,7 @@ async def test_transformer(rest_v1_client):
     service_name = "isvc-transformer"
     predictor = V1beta1PredictorSpec(
         min_replicas=1,
-        pytorch=V1beta1TorchServeSpec(
+        pytorch=V1beta1PyTorchSpec(
             storage_uri="gs://kfserving-examples/models/torchserve/image_classifier/v1",
             protocol_version="v1",
             resources=V1ResourceRequirements(
