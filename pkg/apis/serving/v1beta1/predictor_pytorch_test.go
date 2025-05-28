@@ -29,7 +29,7 @@ import (
 	"github.com/kserve/kserve/pkg/constants"
 )
 
-func TestTorchServeValidation(t *testing.T) {
+func TestPyTorchValidation(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 	scenarios := map[string]struct {
 		spec    PredictorSpec
@@ -37,7 +37,7 @@ func TestTorchServeValidation(t *testing.T) {
 	}{
 		"AcceptGoodRuntimeVersion": {
 			spec: PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				PyTorch: &PyTorchSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						RuntimeVersion: proto.String("0.7.0"),
 					},
@@ -47,7 +47,7 @@ func TestTorchServeValidation(t *testing.T) {
 		},
 		"RejectGpuRuntimeVersionWithoutGpuResource": {
 			spec: PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				PyTorch: &PyTorchSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						RuntimeVersion: proto.String("0.7.0-gpu"),
 					},
@@ -57,7 +57,7 @@ func TestTorchServeValidation(t *testing.T) {
 		},
 		"RejectGpuGpuResourceWithoutGpuRuntime": {
 			spec: PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				PyTorch: &PyTorchSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						RuntimeVersion: proto.String("0.7.0"),
 						Container: corev1.Container{
@@ -83,7 +83,7 @@ func TestTorchServeValidation(t *testing.T) {
 	}
 }
 
-func TestTorchServeDefaulter(t *testing.T) {
+func TestPyTorchDefaulter(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
 	protocolV1 := constants.ProtocolV1
@@ -106,12 +106,12 @@ func TestTorchServeDefaulter(t *testing.T) {
 	}{
 		"DefaultRuntimeVersionAndProtocol": {
 			spec: PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				PyTorch: &PyTorchSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{},
 				},
 			},
 			expected: PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				PyTorch: &PyTorchSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						ProtocolVersion: &protocolV1,
 						Container: corev1.Container{
@@ -127,7 +127,7 @@ func TestTorchServeDefaulter(t *testing.T) {
 		},
 		"DefaultResources": {
 			spec: PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				PyTorch: &PyTorchSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						ProtocolVersion: &protocolV1,
 						RuntimeVersion:  proto.String("0.7.0"),
@@ -135,7 +135,7 @@ func TestTorchServeDefaulter(t *testing.T) {
 				},
 			},
 			expected: PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				PyTorch: &PyTorchSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						RuntimeVersion:  proto.String("0.7.0"),
 						ProtocolVersion: &protocolV1,
@@ -162,7 +162,7 @@ func TestTorchServeDefaulter(t *testing.T) {
 	}
 }
 
-func TestTorchServeSpec_GetProtocol(t *testing.T) {
+func TestPyTorchSpec_GetProtocol(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
 	scenarios := map[string]struct {
@@ -171,7 +171,7 @@ func TestTorchServeSpec_GetProtocol(t *testing.T) {
 	}{
 		"default": {
 			spec: PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				PyTorch: &PyTorchSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{},
 				},
 				ComponentExtensionSpec: ComponentExtensionSpec{},
@@ -180,7 +180,7 @@ func TestTorchServeSpec_GetProtocol(t *testing.T) {
 		},
 		"ProtocolSpecified": {
 			spec: PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				PyTorch: &PyTorchSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						ProtocolVersion: (*constants.InferenceServiceProtocol)(proto.String(string(constants.ProtocolV2))),
 					},
@@ -201,7 +201,7 @@ func TestTorchServeSpec_GetProtocol(t *testing.T) {
 	}
 }
 
-func TestTorchServeSpec_GetContainer(t *testing.T) {
+func TestPyTorchSpec_GetContainer(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
 	metadata := metav1.ObjectMeta{Name: constants.InferenceServiceContainerName}
@@ -210,7 +210,7 @@ func TestTorchServeSpec_GetContainer(t *testing.T) {
 	}{
 		"simple": {
 			spec: PredictorSpec{
-				PyTorch: &TorchServeSpec{
+				PyTorch: &PyTorchSpec{
 					PredictorExtensionSpec: PredictorExtensionSpec{
 						StorageURI: proto.String("s3://modelzoo"),
 						Container: corev1.Container{

@@ -487,7 +487,7 @@ func TestIsMemoryResourceAvailable(t *testing.T) {
 					},
 					Spec: InferenceServiceSpec{
 						Predictor: PredictorSpec{
-							PyTorch: &TorchServeSpec{
+							PyTorch: &PyTorchSpec{
 								PredictorExtensionSpec: PredictorExtensionSpec{
 									ProtocolVersion: &protocolV1,
 									Container: corev1.Container{
@@ -507,7 +507,7 @@ func TestIsMemoryResourceAvailable(t *testing.T) {
 					},
 					Spec: InferenceServiceSpec{
 						Predictor: PredictorSpec{
-							PyTorch: &TorchServeSpec{
+							PyTorch: &PyTorchSpec{
 								PredictorExtensionSpec: PredictorExtensionSpec{
 									ProtocolVersion: &protocolV2,
 									Container: corev1.Container{
@@ -527,7 +527,7 @@ func TestIsMemoryResourceAvailable(t *testing.T) {
 					},
 					Spec: InferenceServiceSpec{
 						Predictor: PredictorSpec{
-							PyTorch: &TorchServeSpec{
+							PyTorch: &PyTorchSpec{
 								PredictorExtensionSpec: PredictorExtensionSpec{
 									StorageURI:      proto.String("gs://someUri"),
 									ProtocolVersion: &protocolV1,
@@ -548,7 +548,7 @@ func TestIsMemoryResourceAvailable(t *testing.T) {
 					},
 					Spec: InferenceServiceSpec{
 						Predictor: PredictorSpec{
-							PyTorch: &TorchServeSpec{
+							PyTorch: &PyTorchSpec{
 								PredictorExtensionSpec: PredictorExtensionSpec{
 									StorageURI:      proto.String("gs://someUri"),
 									ProtocolVersion: &protocolV2,

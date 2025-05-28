@@ -86,7 +86,7 @@ class V1beta1PredictorSpec(object):
         'preemption_policy': 'str',
         'priority': 'int',
         'priority_class_name': 'str',
-        'pytorch': 'V1beta1TorchServeSpec',
+        'pytorch': 'V1beta1PyTorchSpec',
         'readiness_gates': 'list[V1PodReadinessGate]',
         'resource_claims': 'list[V1PodResourceClaim]',
         'resources': 'V1ResourceRequirements',
@@ -1268,7 +1268,7 @@ class V1beta1PredictorSpec(object):
 
 
         :return: The pytorch of this V1beta1PredictorSpec.  # noqa: E501
-        :rtype: V1beta1TorchServeSpec
+        :rtype: V1beta1PyTorchSpec
         """
         return self._pytorch
 
@@ -1278,7 +1278,7 @@ class V1beta1PredictorSpec(object):
 
 
         :param pytorch: The pytorch of this V1beta1PredictorSpec.  # noqa: E501
-        :type: V1beta1TorchServeSpec
+        :type: V1beta1PyTorchSpec
         """
 
         self._pytorch = pytorch
