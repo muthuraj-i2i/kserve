@@ -36,8 +36,6 @@ type PredictorSpec struct {
 	XGBoost *XGBoostSpec `json:"xgboost,omitempty"`
 	// Spec for TFServing (https://github.com/tensorflow/serving)
 	Tensorflow *TFServingSpec `json:"tensorflow,omitempty"`
-	// Spec for TorchServe (https://pytorch.org/serve)
-	PyTorch *TorchServeSpec `json:"pytorch,omitempty"`
 	// Spec for Triton Inference Server (https://github.com/triton-inference-server/server)
 	Triton *TritonSpec `json:"triton,omitempty"`
 	// Spec for ONNX runtime (https://github.com/microsoft/onnxruntime)
@@ -124,7 +122,6 @@ type StorageSpec struct {
 func (s *PredictorSpec) GetImplementations() []ComponentImplementation {
 	implementations := NonNilComponents([]ComponentImplementation{
 		s.XGBoost,
-		s.PyTorch,
 		s.Triton,
 		s.SKLearn,
 		s.Tensorflow,

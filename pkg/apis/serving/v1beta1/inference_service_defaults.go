@@ -221,9 +221,6 @@ func (isvc *InferenceService) setPredictorModelDefaults() {
 	case isvc.Spec.Predictor.XGBoost != nil:
 		isvc.assignXGBoostRuntime()
 
-	case isvc.Spec.Predictor.PyTorch != nil:
-		isvc.assignPyTorchRuntime()
-
 	case isvc.Spec.Predictor.Triton != nil:
 		isvc.assignTritonRuntime()
 
@@ -277,15 +274,6 @@ func (isvc *InferenceService) assignXGBoostRuntime() {
 	}
 	// remove xgboost spec
 	isvc.Spec.Predictor.XGBoost = nil
-}
-
-func (isvc *InferenceService) assignPyTorchRuntime() {
-	isvc.Spec.Predictor.Model = &ModelSpec{
-		ModelFormat:            ModelFormat{Name: constants.SupportedModelPyTorch},
-		PredictorExtensionSpec: isvc.Spec.Predictor.PyTorch.PredictorExtensionSpec,
-	}
-	// remove pytorch spec
-	isvc.Spec.Predictor.PyTorch = nil
 }
 
 func (isvc *InferenceService) assignTritonRuntime() {
