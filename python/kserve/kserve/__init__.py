@@ -100,6 +100,7 @@ from .models.v1beta1_predictors_config import V1beta1PredictorsConfig
 from .models.v1beta1_sk_learn_spec import V1beta1SKLearnSpec
 from .models.v1beta1_tf_serving_spec import V1beta1TFServingSpec
 from .models.v1beta1_torch_serve_spec import V1beta1TorchServeSpec
+from .models.v1beta1_py_torch_spec import V1beta1PyTorchSpec
 from .models.v1beta1_transformer_config import V1beta1TransformerConfig
 from .models.v1beta1_transformer_spec import V1beta1TransformerSpec
 from .models.v1beta1_transformers_config import V1beta1TransformersConfig

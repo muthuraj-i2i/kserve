@@ -35,23 +35,23 @@ const (
 	V2ServiceEnvelope                = "kservev2"
 )
 
-// TorchServeSpec defines arguments for configuring PyTorch model serving.
-type TorchServeSpec struct {
+// PyTorchSpec defines arguments for configuring PyTorch model serving.
+type PyTorchSpec struct {
 	// Contains fields shared across all predictors
 	PredictorExtensionSpec `json:",inline"`
 }
 
-var _ ComponentImplementation = &TorchServeSpec{}
+var _ ComponentImplementation = &PyTorchSpec{}
 
 // Validate returns an error if invalid
-func (t *TorchServeSpec) Validate() error {
+func (t *PyTorchSpec) Validate() error {
 	return utils.FirstNonNilError([]error{
 		t.validateGPU(),
 		validateStorageSpec(t.GetStorageSpec(), t.GetStorageUri()),
 	})
 }
 
-func (t *TorchServeSpec) validateGPU() error {
+func (t *PyTorchSpec) validateGPU() error {
 	if t.RuntimeVersion == nil {
 		return nil
 	}
@@ -66,7 +66,7 @@ func (t *TorchServeSpec) validateGPU() error {
 }
 
 // Default sets defaults on the resource
-func (t *TorchServeSpec) Default(config *InferenceServicesConfig) {
+func (t *PyTorchSpec) Default(config *InferenceServicesConfig) {
 	t.Container.Name = constants.InferenceServiceContainerName
 	if t.ProtocolVersion == nil {
 		defaultProtocol := constants.ProtocolV1
@@ -75,11 +75,11 @@ func (t *TorchServeSpec) Default(config *InferenceServicesConfig) {
 	setResourceRequirementDefaults(config, &t.Resources)
 }
 
-func (t *TorchServeSpec) GetContainer(metadata metav1.ObjectMeta, extensions *ComponentExtensionSpec, config *InferenceServicesConfig, predictorHost ...string) *corev1.Container {
+func (t *PyTorchSpec) GetContainer(metadata metav1.ObjectMeta, extensions *ComponentExtensionSpec, config *InferenceServicesConfig, predictorHost ...string) *corev1.Container {
 	return &t.Container
 }
 
-func (t *TorchServeSpec) GetProtocol() constants.InferenceServiceProtocol {
+func (t *PyTorchSpec) GetProtocol() constants.InferenceServiceProtocol {
 	if t.ProtocolVersion != nil {
 		return *t.ProtocolVersion
 	}

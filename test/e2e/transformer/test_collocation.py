@@ -143,7 +143,7 @@ async def test_transformer_collocation_runtime(rest_v1_client):
             model_format=V1beta1ModelFormat(
                 name="pytorch",
             ),
-            storage_uri="gs://kfserving-examples/models/torchserve/image_classifier/v1",
+            storage_uri="gs://kfserving-examples/models/torchscript",
             protocol_version="v1",
             resources=V1ResourceRequirements(
                 requests={"cpu": "100m", "memory": "4Gi"},

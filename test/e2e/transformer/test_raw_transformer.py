@@ -24,7 +24,7 @@ from kserve import KServeClient
 from kserve import constants
 from kserve import V1beta1PredictorSpec
 from kserve import V1beta1TransformerSpec
-from kserve import V1beta1TorchServeSpec
+from kserve import V1beta1PyTorchSpec
 from kserve import V1beta1InferenceServiceSpec
 from kserve import V1beta1InferenceService
 
@@ -39,8 +39,8 @@ async def test_transformer(rest_v1_client, network_layer):
     service_name = "raw-transformer-" + suffix
     predictor = V1beta1PredictorSpec(
         min_replicas=1,
-        pytorch=V1beta1TorchServeSpec(
-            storage_uri="gs://kfserving-examples/models/torchserve/image_classifier/v1",
+        pytorch=V1beta1PyTorchSpec(
+            storage_uri="gs://kfserving-examples/models/torchscript",
             resources=V1ResourceRequirements(
                 requests={"cpu": "50m", "memory": "128Mi"},
                 limits={"cpu": "1", "memory": "1Gi"},
@@ -61,7 +61,7 @@ async def test_transformer(rest_v1_client, network_layer):
                 env=[
                     V1EnvVar(
                         name="STORAGE_URI",
-                        value="gs://kfserving-examples/models/torchserve/image_classifier/v1",
+                        value="gs://kfserving-examples/models/torchscript",
                     )
                 ],
             )

@@ -10,7 +10,6 @@ resources:
 - kserve-pmmlserver.yaml
 - kserve-paddleserver.yaml
 - kserve-lgbserver.yaml
-- kserve-torchserve.yaml
 - kserve-huggingfaceserver.yaml
 - kserve-huggingfaceserver-multinode.yaml
 
@@ -47,10 +46,6 @@ images:
 - name: kserve-lgbserver
   newName: kserve/lgbserver
   newTag: latest
-
-- name: kserve-torchserve
-  newName: pytorch/torchserve-kfs
-  newTag: 0.9.0
 
 - name: huggingfaceserver
   newName: kserve/huggingfaceserver

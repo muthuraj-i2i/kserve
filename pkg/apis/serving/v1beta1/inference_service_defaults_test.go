@@ -474,26 +474,6 @@ func TestRuntimeDefaults(t *testing.T) {
 		runtime string
 		matcher types.GomegaMatcher
 	}{
-		"PyTorch": {
-			config: &InferenceServicesConfig{},
-			isvc: InferenceService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-				},
-				Spec: InferenceServiceSpec{
-					Predictor: PredictorSpec{
-						PyTorch: &TorchServeSpec{
-							PredictorExtensionSpec: PredictorExtensionSpec{
-								StorageURI: proto.String("gs://testbucket/testmodel"),
-							},
-						},
-					},
-				},
-			},
-			runtime: constants.TorchServe,
-			matcher: gomega.Equal(constants.ProtocolV1),
-		},
 		"Triton": {
 			config: &InferenceServicesConfig{},
 			isvc: InferenceService{
@@ -551,72 +531,6 @@ func TestRuntimeDefaults(t *testing.T) {
 			g.Expect(scenario.isvc.Spec.Predictor.XGBoost).To(gomega.BeNil())
 		}
 		g.Expect(*scenario.isvc.Spec.Predictor.Model.ProtocolVersion).To(scenario.matcher)
-	}
-}
-
-func TestTorchServeDefaults(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-
-	deployConfig := &DeployConfig{
-		DefaultDeploymentMode: "Serverless",
-	}
-	protocolVersion := constants.ProtocolV2
-	scenarios := map[string]struct {
-		config  *InferenceServicesConfig
-		isvc    InferenceService
-		matcher types.GomegaMatcher
-	}{
-		"pytorch with protocol version 2": {
-			config: &InferenceServicesConfig{},
-			isvc: InferenceService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-				},
-				Spec: InferenceServiceSpec{
-					Predictor: PredictorSpec{
-						PyTorch: &TorchServeSpec{
-							PredictorExtensionSpec: PredictorExtensionSpec{
-								StorageURI:      proto.String("gs://testbucket/testmodel"),
-								ProtocolVersion: &protocolVersion,
-							},
-						},
-					},
-				},
-			},
-			matcher: gomega.HaveKeyWithValue(constants.ServiceEnvelope, constants.ServiceEnvelopeKServeV2),
-		},
-		"pytorch with labels": {
-			config: &InferenceServicesConfig{},
-			isvc: InferenceService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Labels: map[string]string{
-						"Purpose": "Testing",
-					},
-				},
-				Spec: InferenceServiceSpec{
-					Predictor: PredictorSpec{
-						PyTorch: &TorchServeSpec{
-							PredictorExtensionSpec: PredictorExtensionSpec{
-								StorageURI: proto.String("gs://testbucket/testmodel"),
-							},
-						},
-					},
-				},
-			},
-			matcher: gomega.HaveKeyWithValue("Purpose", "Testing"),
-		},
-	}
-	runtime := constants.TorchServe
-	for _, scenario := range scenarios {
-		scenario.isvc.DefaultInferenceService(scenario.config, deployConfig, nil, nil)
-		scenario.isvc.Spec.Predictor.Model.Runtime = &runtime
-		scenario.isvc.SetTorchServeDefaults()
-		g.Expect(scenario.isvc.Spec.Predictor.Model).ToNot(gomega.BeNil())
-		g.Expect(scenario.isvc.Spec.Predictor.PyTorch).To(gomega.BeNil())
-		g.Expect(scenario.isvc.ObjectMeta.Labels).To(scenario.matcher)
 	}
 }
 
@@ -868,7 +782,7 @@ func TestLocalModelAnnotation(t *testing.T) {
 				},
 				Spec: InferenceServiceSpec{
 					Predictor: PredictorSpec{
-						PyTorch: &TorchServeSpec{
+						PyTorch: &PyTorchSpec{
 							PredictorExtensionSpec: PredictorExtensionSpec{
 								StorageURI:      proto.String("gs://bucket/model"),
 								ProtocolVersion: &protocolVersion,
@@ -892,7 +806,7 @@ func TestLocalModelAnnotation(t *testing.T) {
 				},
 				Spec: InferenceServiceSpec{
 					Predictor: PredictorSpec{
-						PyTorch: &TorchServeSpec{
+						PyTorch: &PyTorchSpec{
 							PredictorExtensionSpec: PredictorExtensionSpec{
 								StorageURI:      proto.String("gs://bucket/model"),
 								ProtocolVersion: &protocolVersion,
@@ -916,7 +830,7 @@ func TestLocalModelAnnotation(t *testing.T) {
 				},
 				Spec: InferenceServiceSpec{
 					Predictor: PredictorSpec{
-						PyTorch: &TorchServeSpec{
+						PyTorch: &PyTorchSpec{
 							PredictorExtensionSpec: PredictorExtensionSpec{
 								StorageURI:      proto.String("gs://bucket/model2"),
 								ProtocolVersion: &protocolVersion,
@@ -940,7 +854,7 @@ func TestLocalModelAnnotation(t *testing.T) {
 				},
 				Spec: InferenceServiceSpec{
 					Predictor: PredictorSpec{
-						PyTorch: &TorchServeSpec{
+						PyTorch: &PyTorchSpec{
 							PredictorExtensionSpec: PredictorExtensionSpec{
 								// This is not considered a match for "gs://bucket/model" on the LocalModelCache
 								StorageURI: proto.String("gs://bucket/model3"),
@@ -964,7 +878,7 @@ func TestLocalModelAnnotation(t *testing.T) {
 				},
 				Spec: InferenceServiceSpec{
 					Predictor: PredictorSpec{
-						PyTorch: &TorchServeSpec{
+						PyTorch: &PyTorchSpec{
 							PredictorExtensionSpec: PredictorExtensionSpec{
 								StorageURI:      proto.String("gs://bucket/model"),
 								ProtocolVersion: &protocolVersion,
