@@ -350,10 +350,6 @@ func (isvc *InferenceService) SetRuntimeDefaults() {
 	if *isvc.Spec.Predictor.Model.Runtime == constants.MLServer {
 		isvc.SetMlServerDefaults()
 	}
-	// add torchserve specific default values
-	if *isvc.Spec.Predictor.Model.Runtime == constants.TorchServe {
-		isvc.SetTorchServeDefaults()
-	}
 	// add triton specific default values
 	if *isvc.Spec.Predictor.Model.Runtime == constants.TritonServer {
 		isvc.SetTritonDefaults()
@@ -401,30 +397,6 @@ func (isvc *InferenceService) SetMlServerDefaults() {
 	} else {
 		isvc.ObjectMeta.Labels[constants.ModelClassLabel] = modelClass
 	}
-}
-
-func (isvc *InferenceService) SetTorchServeDefaults() {
-	// set 'v1' as default protocol version for torchserve
-	if isvc.Spec.Predictor.Model.ProtocolVersion == nil {
-		protocolV1 := constants.ProtocolV1
-		isvc.Spec.Predictor.Model.ProtocolVersion = &protocolV1
-	}
-	// set torchserve service envelope based on protocol version
-	if isvc.ObjectMeta.Labels == nil {
-		isvc.ObjectMeta.Labels = map[string]string{constants.ServiceEnvelope: constants.ServiceEnvelopeKServe}
-	} else {
-		isvc.ObjectMeta.Labels[constants.ServiceEnvelope] = constants.ServiceEnvelopeKServe
-	}
-	if (constants.ProtocolV2 == *isvc.Spec.Predictor.Model.ProtocolVersion) || (constants.ProtocolGRPCV2 == *isvc.Spec.Predictor.Model.ProtocolVersion) {
-		isvc.ObjectMeta.Labels[constants.ServiceEnvelope] = constants.ServiceEnvelopeKServeV2
-	}
-
-	// set torchserve env variable "PROTOCOL_VERSION" based on ProtocolVersion
-	isvc.Spec.Predictor.Model.Env = append(isvc.Spec.Predictor.Model.Env,
-		corev1.EnvVar{
-			Name:  constants.ProtocolVersionENV,
-			Value: string(*isvc.Spec.Predictor.Model.ProtocolVersion),
-		})
 }
 
 func (isvc *InferenceService) SetTritonDefaults() {

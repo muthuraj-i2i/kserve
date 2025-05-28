@@ -33,7 +33,6 @@ from kserve import V1beta1PMMLSpec
 from kserve import V1beta1PredictorSpec
 from kserve import V1beta1SKLearnSpec
 from kserve import V1beta1TFServingSpec
-from kserve import V1beta1TorchServeSpec
 from kserve import V1beta1TritonSpec
 from kserve import V1beta1XGBoostSpec
 from kserve.api.watch import isvc_watch
@@ -41,7 +40,6 @@ from kserve.api.watch import isvc_watch
 
 AVAILABLE_FRAMEWORKS = {
     "tensorflow": V1beta1TFServingSpec,
-    "pytorch": V1beta1TorchServeSpec,
     "sklearn": V1beta1SKLearnSpec,
     "xgboost": V1beta1XGBoostSpec,
     "onnx": V1beta1ONNXRuntimeSpec,
