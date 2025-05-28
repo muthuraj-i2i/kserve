@@ -48,19 +48,16 @@ async def test_transformer_collocation(rest_v1_client):
         containers=[
             V1Container(
                 name=INFERENCESERVICE_CONTAINER,
-                image="pytorch/torchserve:0.9.0-cpu",
+                image="nvcr.io/nvidia/tritonserver:23.05-py3",
                 env=[
                     V1EnvVar(
                         name=STORAGE_URI_ENV,
-                        value="gs://kfserving-examples/models/torchserve/image_classifier/v1",
+                        value="gs://kfserving-examples/models/triton/mnist",
                     ),
-                    V1EnvVar(name="TS_SERVICE_ENVELOPE", value="kserve"),
                 ],
                 args=[
-                    "torchserve",
-                    "--start",
-                    "--model-store=/mnt/models/model-store",
-                    "--ts-config=/mnt/models/config/config.properties",
+                    "tritonserver",
+                    "--model-repository=/mnt/models/model-store",
                 ],
                 resources=V1ResourceRequirements(
                     requests={"cpu": "10m", "memory": "128Mi"},
@@ -74,7 +71,7 @@ async def test_transformer_collocation(rest_v1_client):
                     f"--model_name={model_name}",
                     "--http_port=8080",
                     "--grpc_port=8081",
-                    "--predictor_host=localhost:8085",
+                    "--predictor_host=localhost:8000",
                     "--enable_predictor_health_check",
                 ],
                 ports=[V1ContainerPort(container_port=8080, protocol="TCP")],
@@ -141,10 +138,10 @@ async def test_transformer_collocation_runtime(rest_v1_client):
         min_replicas=1,
         model=V1beta1ModelSpec(
             model_format=V1beta1ModelFormat(
-                name="pytorch",
+                name="triton",
             ),
-            storage_uri="gs://kfserving-examples/models/torchserve/image_classifier/v1",
-            protocol_version="v1",
+            storage_uri="gs://kfserving-examples/models/triton/mnist",
+            protocol_version="v2",
             resources=V1ResourceRequirements(
                 requests={"cpu": "100m", "memory": "4Gi"},
                 limits={"cpu": "1", "memory": "4Gi"},
@@ -158,7 +155,7 @@ async def test_transformer_collocation_runtime(rest_v1_client):
                     f"--model_name={model_name}",
                     "--http_port=8090",
                     "--grpc_port=8091",
-                    "--predictor_host=localhost:8085",
+                    "--predictor_host=localhost:8000",
                     "--enable_predictor_health_check",
                 ],
                 ports=[V1ContainerPort(container_port=8090, protocol="TCP")],
@@ -227,19 +224,16 @@ async def test_raw_transformer_collocation(rest_v1_client, network_layer):
         containers=[
             V1Container(
                 name=INFERENCESERVICE_CONTAINER,
-                image="pytorch/torchserve:0.9.0-cpu",
+                image="nvcr.io/nvidia/tritonserver:23.05-py3",
                 env=[
                     V1EnvVar(
                         name=STORAGE_URI_ENV,
-                        value="gs://kfserving-examples/models/torchserve/image_classifier/v1",
+                        value="gs://kfserving-examples/models/triton/mnist",
                     ),
-                    V1EnvVar(name="TS_SERVICE_ENVELOPE", value="kserve"),
                 ],
                 args=[
-                    "torchserve",
-                    "--start",
-                    "--model-store=/mnt/models/model-store",
-                    "--ts-config=/mnt/models/config/config.properties",
+                    "tritonserver",
+                    "--model-repository=/mnt/models/model-store",
                 ],
                 resources=V1ResourceRequirements(
                     requests={"cpu": "10m", "memory": "128Mi"},
@@ -253,7 +247,7 @@ async def test_raw_transformer_collocation(rest_v1_client, network_layer):
                     f"--model_name={model_name}",
                     "--http_port=8080",
                     "--grpc_port=8081",
-                    "--predictor_host=localhost:8085",
+                    "--predictor_host=localhost:8000",
                     "--enable_predictor_health_check",
                 ],
                 ports=[
@@ -330,10 +324,10 @@ async def test_raw_transformer_collocation_runtime(rest_v1_client, network_layer
         min_replicas=1,
         model=V1beta1ModelSpec(
             model_format=V1beta1ModelFormat(
-                name="pytorch",
+                name="triton",
             ),
-            storage_uri="gs://kfserving-examples/models/torchserve/image_classifier/v1",
-            protocol_version="v1",
+            storage_uri="gs://kfserving-examples/models/triton/mnist",
+            protocol_version="v2",
             resources=V1ResourceRequirements(
                 requests={"cpu": "100m", "memory": "4Gi"},
                 limits={"cpu": "1", "memory": "4Gi"},
@@ -347,7 +341,7 @@ async def test_raw_transformer_collocation_runtime(rest_v1_client, network_layer
                     f"--model_name={model_name}",
                     "--http_port=8090",
                     "--grpc_port=8091",
-                    "--predictor_host=localhost:8085",
+                    "--predictor_host=localhost:8000",
                     "--enable_predictor_health_check",
                 ],
                 ports=[V1ContainerPort(container_port=8090, protocol="TCP")],
@@ -414,3 +408,4 @@ async def test_raw_transformer_collocation_runtime(rest_v1_client, network_layer
     )
     assert res["predictions"][0] == 2
     kserve_client.delete(service_name, KSERVE_TEST_NAMESPACE)
+
