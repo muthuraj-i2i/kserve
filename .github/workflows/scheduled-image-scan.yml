@@ -71,6 +71,7 @@ jobs:
             { name: paddleserver, file: python/paddle.Dockerfile },
             { name: lgbserver, file: python/lgb.Dockerfile },
             { name: huggingfaceserver, file: python/huggingface_server.Dockerfile },
+            { name: huggingfaceserver-cpu, file: python/huggingface_server_cpu.Dockerfile },
           ]
 
     steps:
