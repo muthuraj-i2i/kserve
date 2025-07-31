@@ -56,7 +56,10 @@ jobs:
                   ./pkg/batcher/... \
                   ./pkg/client/... \
                   ./pkg/constants/... \
-                  ./pkg/controller/v1alpha1/... \
+                  ./pkg/controller/v1alpha1/inferencegraph/... \
+                  ./pkg/controller/v1alpha1/llmisvc/... \
+                  ./pkg/controller/v1alpha1/localmodel/... \
+                  ./pkg/controller/v1alpha1/localmodelnode/... \
                   ./pkg/controller/v1beta1/inferenceservice \
                   ./pkg/controller/v1beta1/inferenceservice/components/... \
                   ./pkg/controller/v1beta1/inferenceservice/reconcilers/autoscaler/... \
@@ -64,13 +67,6 @@ jobs:
                   ./pkg/controller/v1beta1/inferenceservice/reconcilers/deployment/... \
                   ./pkg/controller/v1beta1/inferenceservice/reconcilers/hpa/... \
                   ./pkg/controller/v1beta1/inferenceservice/reconcilers/ingress/... \
-                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/keda/... \
-                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/knative/... \
-                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/modelconfig/... \
-                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/otel/... \
-                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/raw/... \
-                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/service/... \
-                  ./pkg/controller/v1beta1/inferenceservice/utils/... \
                   ./pkg/credentials/... \
                   -coverprofile coverage-batch-1.out -coverpkg ./pkg/... ./cmd/...
 
@@ -116,6 +112,15 @@ jobs:
                 
                 # Run tests for batch 2 packages
                 KUBEBUILDER_ASSETS="$$(bin/setup-envtest use 1.31 -p path)" go test --timeout 20m \
+                  ./pkg/controller/v1alpha1/trainedmodel/... \
+                  ./pkg/controller/v1alpha1/utils/... \
+                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/keda/... \
+                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/knative/... \
+                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/modelconfig/... \
+                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/otel/... \
+                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/raw/... \
+                  ./pkg/controller/v1beta1/inferenceservice/reconcilers/service/... \
+                  ./pkg/controller/v1beta1/inferenceservice/utils/... \
                   ./pkg/logger/... \
                   ./pkg/modelconfig/... \
                   ./pkg/openapi/... \
