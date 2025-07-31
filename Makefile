@@ -183,44 +183,10 @@ clean:
 
 # Run tests
 test: fmt vet manifests envtest test-qpext
-	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
-	GOMAXPROCS=12 \
-	go test -p 12 -short -failfast --timeout 25m \
-	-ldflags="-s -w" \
-	$$(go list ./pkg/...) ./cmd/... \
-	-coverprofile coverage.out -coverpkg ./pkg/... ./cmd...
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m $$(go list ./pkg/...) ./cmd/... -coverprofile coverage.out -coverpkg ./pkg/... ./cmd...
 
 test-qpext:
 	cd qpext && go test -v ./... -cover
-
-# Fast unit tests only (skip integration tests)
-test-unit: fmt vet envtest
-	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
-	GOMAXPROCS=12 \
-	go test -p 12 -short -failfast --timeout 5m \
-	-ldflags="-s -w" \
-	-run="^Test.*Unit|^Test.*Validation|^Test.*Webhook" \
-	$$(go list ./pkg/...) ./cmd/... | grep -E "(PASS|FAIL|ok|SKIP)"
-
-# Run only controller tests with extended timeout
-test-controller: fmt vet manifests envtest
-	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
-	GOMAXPROCS=8 \
-	go test -p 8 -v --timeout 20m \
-	./pkg/controller/...
-
-# Run non-controller tests (faster)
-test-non-controller: fmt vet envtest
-	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
-	GOMAXPROCS=12 \
-	go test -p 12 -short -failfast --timeout 8m \
-	-ldflags="-s -w" \
-	$$(go list ./pkg/... | grep -v controller) ./cmd/... \
-	-coverprofile coverage-non-controller.out
-
-# Combined fast approach: run non-controller + controller separately
-test-split: test-non-controller test-controller
-	@echo "All tests completed successfully"
 
 # Build manager binary
 manager: generate fmt vet go-lint
@@ -443,4 +409,3 @@ apidocs:
 .PHONY: check-doc-links
 check-doc-links:
 	@python3 hack/verify-doc-links.py && echo "$@: OK"
-
