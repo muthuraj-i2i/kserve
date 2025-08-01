@@ -188,6 +188,18 @@ test: fmt vet manifests envtest test-qpext
 # Run test batch 1 (for parallel execution)
 test-new: fmt vet manifests envtest test-qpext
 	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m \
+	  ./pkg/agent/... \
+	  ./pkg/apis/... \
+	  ./pkg/batcher/... \
+	  ./pkg/client/... \
+	  ./pkg/constants/... \
+	  ./pkg/credentials/... \
+	  ./pkg/logger/... \
+	  ./pkg/modelconfig/... \
+	  ./pkg/openapi/... \
+	  ./pkg/testing/... \
+	  ./pkg/utils/... \
+	  ./pkg/webhook/... \
 	  ./pkg/controller/v1beta1/inferenceservice/components/... \
 	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/autoscaler/... \
 	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/cabundleconfigmap/... \
@@ -201,24 +213,12 @@ test-new: fmt vet manifests envtest test-qpext
 	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/raw/... \
 	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/service/... \
 	  ./pkg/controller/v1beta1/inferenceservice/utils/... \
-	  ./pkg/credentials/... \
-	  ./pkg/agent/... \
-	  ./pkg/apis/... \
-	  ./pkg/batcher/... \
-	  ./pkg/client/... \
-	  ./pkg/constants/... \
 	  ./pkg/controller/v1alpha1/trainedmodel/... \
 	  ./pkg/controller/v1alpha1/utils/... \
 	  ./pkg/controller/v1alpha1/inferencegraph/... \
 	  ./pkg/controller/v1alpha1/llmisvc/... \
 	  ./pkg/controller/v1alpha1/localmodel/... \
 	  ./pkg/controller/v1alpha1/localmodelnode/... \
-	  ./pkg/logger/... \
-	  ./pkg/modelconfig/... \
-	  ./pkg/openapi/... \
-	  ./pkg/testing/... \
-	  ./pkg/utils/... \
-	  ./pkg/webhook/... \
 	  ./cmd/... \
 	  -coverprofile coverage.out -coverpkg ./pkg/... ./cmd/...
 
