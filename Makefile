@@ -186,21 +186,22 @@ test: fmt vet manifests envtest test-qpext
 	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m $$(go list ./pkg/...) ./cmd/... -coverprofile coverage.out -coverpkg ./pkg/... ./cmd...
 
 # Run test batch 1 (for parallel execution)
-test-batch-1: fmt vet manifests envtest test-qpext
+test-new: fmt vet manifests envtest test-qpext
 	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m \
-	  ./pkg/controller/v1beta1/inferenceservice \
 	  ./pkg/controller/v1beta1/inferenceservice/components/... \
 	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/autoscaler/... \
 	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/cabundleconfigmap/... \
 	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/deployment/... \
 	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/hpa/... \
 	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/ingress/... \
+	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/keda/... \
+	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/knative/... \
+	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/modelconfig/... \
+	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/otel/... \
+	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/raw/... \
+	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/service/... \
+	  ./pkg/controller/v1beta1/inferenceservice/utils/... \
 	  ./pkg/credentials/... \
-	  -coverprofile coverage-batch-1.out -coverpkg ./pkg/... ./cmd/...
-
-# Run test batch 2 (for parallel execution)
-test-batch-2: envtest
-	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m \
 	  ./pkg/agent/... \
 	  ./pkg/apis/... \
 	  ./pkg/batcher/... \
@@ -212,13 +213,6 @@ test-batch-2: envtest
 	  ./pkg/controller/v1alpha1/llmisvc/... \
 	  ./pkg/controller/v1alpha1/localmodel/... \
 	  ./pkg/controller/v1alpha1/localmodelnode/... \
-	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/keda/... \
-	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/knative/... \
-	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/modelconfig/... \
-	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/otel/... \
-	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/raw/... \
-	  ./pkg/controller/v1beta1/inferenceservice/reconcilers/service/... \
-	  ./pkg/controller/v1beta1/inferenceservice/utils/... \
 	  ./pkg/logger/... \
 	  ./pkg/modelconfig/... \
 	  ./pkg/openapi/... \
@@ -226,7 +220,7 @@ test-batch-2: envtest
 	  ./pkg/utils/... \
 	  ./pkg/webhook/... \
 	  ./cmd/... \
-	  -coverprofile coverage-batch-2.out -coverpkg ./pkg/... ./cmd/...
+	  -coverprofile coverage.out -coverpkg ./pkg/... ./cmd/...
 
 # Merge coverage files from parallel test batches
 merge-coverage:
