@@ -32,7 +32,6 @@ import (
 	istioclientv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierr "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
@@ -40,7 +39,6 @@ import (
 	"knative.dev/pkg/apis"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/network"
-	"knative.dev/serving/pkg/apis/autoscaling"
 	knservingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -59,440 +57,11 @@ var _ = Describe("v1beta1 inference service controller", func() {
 		domain   = "example.com"
 	)
 	var (
-		defaultResource = corev1.ResourceRequirements{
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("1"),
-				corev1.ResourceMemory: resource.MustParse("2Gi"),
-			},
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("1"),
-				corev1.ResourceMemory: resource.MustParse("2Gi"),
-			},
-		}
-		configs = map[string]string{
-			"explainers": `{
-				"art": {
-					"image": "kserve/art-explainer",
-					"defaultImageVersion": "latest"
-				}
-			}`,
-			"ingress": `{
-				"kserveIngressGateway": "kserve/kserve-ingress-gateway",
-				"ingressGateway": "knative-serving/knative-ingress-gateway",
-				"localGateway": "knative-serving/knative-local-gateway",
-				"localGatewayService": "knative-local-gateway.istio-system.svc.cluster.local"
-			}`,
-			"storageInitializer": `{
-				"image" : "kserve/storage-initializer:latest",
-				"memoryRequest": "100Mi",
-				"memoryLimit": "1Gi",
-				"cpuRequest": "100m",
-				"cpuLimit": "1",
-				"CaBundleConfigMapName": "",
-				"caBundleVolumeMountPath": "/etc/ssl/custom-certs",
-				"enableDirectPvcVolumeMount": false
-			}`,
-		}
+		fixtures = NewTestFixtures()
 	)
 
-	Context("with knative configured to not allow zero initial scale", func() {
-		When("a Serverless InferenceService is created with an initial scale annotation and value of zero", func() {
-			It("should ignore the annotation", func() {
-				// Create configmap
-				configMap := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      constants.InferenceServiceConfigMapName,
-						Namespace: constants.KServeNamespace,
-					},
-					Data: configs,
-				}
-				Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
-				defer k8sClient.Delete(context.TODO(), configMap)
-
-				// Create InferenceService
-				serviceName := "initialscale1"
-				expectedRequest := reconcile.Request{NamespacedName: types.NamespacedName{Name: serviceName, Namespace: "default"}}
-				serviceKey := expectedRequest.NamespacedName
-				storageUri := "s3://test/mnist/export"
-				ctx := context.Background()
-				var minScale int32 = 2
-				isvc := &v1beta1.InferenceService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      serviceKey.Name,
-						Namespace: serviceKey.Namespace,
-						Annotations: map[string]string{
-							"serving.kserve.io/deploymentMode":    "Serverless",
-							autoscaling.InitialScaleAnnotationKey: "0",
-						},
-					},
-					Spec: v1beta1.InferenceServiceSpec{
-						Predictor: v1beta1.PredictorSpec{
-							ComponentExtensionSpec: v1beta1.ComponentExtensionSpec{
-								MinReplicas: &minScale,
-							},
-							Tensorflow: &v1beta1.TFServingSpec{
-								PredictorExtensionSpec: v1beta1.PredictorExtensionSpec{
-									StorageURI:     &storageUri,
-									RuntimeVersion: proto.String("1.14.0"),
-									Container: corev1.Container{
-										Name:      constants.InferenceServiceContainerName,
-										Resources: defaultResource,
-									},
-								},
-							},
-						},
-					},
-				}
-				Expect(k8sClient.Create(ctx, isvc)).Should(Succeed())
-				defer k8sClient.Delete(ctx, isvc)
-
-				predictorServiceKey := types.NamespacedName{
-					Name:      constants.PredictorServiceName(serviceKey.Name),
-					Namespace: serviceKey.Namespace,
-				}
-				actualService := &knservingv1.Service{}
-				Eventually(func() error { return k8sClient.Get(context.TODO(), predictorServiceKey, actualService) }, timeout).
-					Should(Succeed())
-
-				Expect(actualService.Spec.Template.Annotations).NotTo(HaveKey(autoscaling.InitialScaleAnnotationKey))
-			})
-		})
-		When("a Serverless InferenceService is created with an initial scale annotation and valid non-zero integer value", func() {
-			It("should override the default initial scale value with the annotation value", func() {
-				// Create configmap
-				configMap := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      constants.InferenceServiceConfigMapName,
-						Namespace: constants.KServeNamespace,
-					},
-					Data: configs,
-				}
-				Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
-				defer k8sClient.Delete(context.TODO(), configMap)
-
-				// Create InferenceService
-				serviceName := "initialscale2"
-				expectedRequest := reconcile.Request{NamespacedName: types.NamespacedName{Name: serviceName, Namespace: "default"}}
-				serviceKey := expectedRequest.NamespacedName
-				storageUri := "s3://test/mnist/export"
-				ctx := context.Background()
-				var minScale int32 = 2
-				isvc := &v1beta1.InferenceService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      serviceKey.Name,
-						Namespace: serviceKey.Namespace,
-						Annotations: map[string]string{
-							"serving.kserve.io/deploymentMode":    "Serverless",
-							autoscaling.InitialScaleAnnotationKey: "3",
-						},
-					},
-					Spec: v1beta1.InferenceServiceSpec{
-						Predictor: v1beta1.PredictorSpec{
-							ComponentExtensionSpec: v1beta1.ComponentExtensionSpec{
-								MinReplicas: &minScale,
-							},
-							Tensorflow: &v1beta1.TFServingSpec{
-								PredictorExtensionSpec: v1beta1.PredictorExtensionSpec{
-									StorageURI:     &storageUri,
-									RuntimeVersion: proto.String("1.14.0"),
-									Container: corev1.Container{
-										Name:      constants.InferenceServiceContainerName,
-										Resources: defaultResource,
-									},
-								},
-							},
-						},
-					},
-				}
-				Expect(k8sClient.Create(ctx, isvc)).Should(Succeed())
-				defer k8sClient.Delete(ctx, isvc)
-
-				predictorServiceKey := types.NamespacedName{
-					Name:      constants.PredictorServiceName(serviceKey.Name),
-					Namespace: serviceKey.Namespace,
-				}
-				actualService := &knservingv1.Service{}
-				Eventually(func() error { return k8sClient.Get(context.TODO(), predictorServiceKey, actualService) }, timeout).
-					Should(Succeed())
-
-				Expect(actualService.Spec.Template.Annotations[autoscaling.InitialScaleAnnotationKey]).To(Equal("3"))
-			})
-		})
-		When("a Serverless InferenceService is created with an initial scale annotation and invalid non-integer value", func() {
-			It("should ignore the annotation", func() {
-				// Create configmap
-				configMap := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      constants.InferenceServiceConfigMapName,
-						Namespace: constants.KServeNamespace,
-					},
-					Data: configs,
-				}
-				Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
-				defer k8sClient.Delete(context.TODO(), configMap)
-
-				// Create InferenceService
-				serviceName := "initialscale3"
-				expectedRequest := reconcile.Request{NamespacedName: types.NamespacedName{Name: serviceName, Namespace: "default"}}
-				serviceKey := expectedRequest.NamespacedName
-				storageUri := "s3://test/mnist/export"
-				ctx := context.Background()
-				var minScale int32 = 2
-				isvc := &v1beta1.InferenceService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      serviceKey.Name,
-						Namespace: serviceKey.Namespace,
-						Annotations: map[string]string{
-							"serving.kserve.io/deploymentMode":    "Serverless",
-							autoscaling.InitialScaleAnnotationKey: "non-integer",
-						},
-					},
-					Spec: v1beta1.InferenceServiceSpec{
-						Predictor: v1beta1.PredictorSpec{
-							ComponentExtensionSpec: v1beta1.ComponentExtensionSpec{
-								MinReplicas: &minScale,
-							},
-							Tensorflow: &v1beta1.TFServingSpec{
-								PredictorExtensionSpec: v1beta1.PredictorExtensionSpec{
-									StorageURI:     &storageUri,
-									RuntimeVersion: proto.String("1.14.0"),
-									Container: corev1.Container{
-										Name:      constants.InferenceServiceContainerName,
-										Resources: defaultResource,
-									},
-								},
-							},
-						},
-					},
-				}
-				Expect(k8sClient.Create(ctx, isvc)).Should(Succeed())
-				defer k8sClient.Delete(ctx, isvc)
-
-				predictorServiceKey := types.NamespacedName{
-					Name:      constants.PredictorServiceName(serviceKey.Name),
-					Namespace: serviceKey.Namespace,
-				}
-				actualService := &knservingv1.Service{}
-				Eventually(func() error { return k8sClient.Get(context.TODO(), predictorServiceKey, actualService) }, timeout).
-					Should(Succeed())
-
-				Expect(actualService.Spec.Template.Annotations).NotTo(HaveKey(autoscaling.InitialScaleAnnotationKey))
-			})
-		})
-	})
-	Context("with knative configured to allow zero initial scale", func() {
-		BeforeEach(func() {
-			time.Sleep(10 * time.Second)
-			// Patch the existing config-autoscaler configmap to set allow-zero-initial-scale to true
-			configAutoscaler := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      constants.AutoscalerConfigmapName,
-					Namespace: constants.AutoscalerConfigmapNamespace,
-				},
-			}
-			configPatch := []byte(`{"data":{"allow-zero-initial-scale":"true"}}`)
-			Eventually(func() error {
-				return k8sClient.Patch(context.TODO(), configAutoscaler, client.RawPatch(types.StrategicMergePatchType, configPatch))
-			}, timeout).Should(Succeed())
-		})
-		AfterEach(func() {
-			time.Sleep(10 * time.Second)
-			// Restore the default autoscaler configuration
-			configAutoscaler := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      constants.AutoscalerConfigmapName,
-					Namespace: constants.AutoscalerConfigmapNamespace,
-				},
-			}
-			configPatch := []byte(`{"data":{}}`)
-			Eventually(func() error {
-				return k8sClient.Patch(context.TODO(), configAutoscaler, client.RawPatch(types.StrategicMergePatchType, configPatch))
-			}, timeout).Should(Succeed())
-		})
-		When("a Serverless InferenceService is created with an initial scale annotation and value of zero", func() {
-			It("should override the default initial scale value with the annotation value", func() {
-				// Create configmap
-				configMap := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      constants.InferenceServiceConfigMapName,
-						Namespace: constants.KServeNamespace,
-					},
-					Data: configs,
-				}
-				Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
-				defer k8sClient.Delete(context.TODO(), configMap)
-
-				// Create InferenceService
-				serviceName := "initialscale4"
-				expectedRequest := reconcile.Request{NamespacedName: types.NamespacedName{Name: serviceName, Namespace: "default"}}
-				serviceKey := expectedRequest.NamespacedName
-				storageUri := "s3://test/mnist/export"
-				ctx := context.Background()
-				var minScale int32 = 2
-				isvc := &v1beta1.InferenceService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      serviceKey.Name,
-						Namespace: serviceKey.Namespace,
-						Annotations: map[string]string{
-							"serving.kserve.io/deploymentMode":    "Serverless",
-							autoscaling.InitialScaleAnnotationKey: "0",
-						},
-					},
-					Spec: v1beta1.InferenceServiceSpec{
-						Predictor: v1beta1.PredictorSpec{
-							ComponentExtensionSpec: v1beta1.ComponentExtensionSpec{
-								MinReplicas: &minScale,
-							},
-							Tensorflow: &v1beta1.TFServingSpec{
-								PredictorExtensionSpec: v1beta1.PredictorExtensionSpec{
-									StorageURI:     &storageUri,
-									RuntimeVersion: proto.String("1.14.0"),
-									Container: corev1.Container{
-										Name:      constants.InferenceServiceContainerName,
-										Resources: defaultResource,
-									},
-								},
-							},
-						},
-					},
-				}
-				Expect(k8sClient.Create(ctx, isvc)).Should(Succeed())
-				defer k8sClient.Delete(ctx, isvc)
-
-				predictorServiceKey := types.NamespacedName{
-					Name:      constants.PredictorServiceName(serviceKey.Name),
-					Namespace: serviceKey.Namespace,
-				}
-				actualService := &knservingv1.Service{}
-				Eventually(func() error { return k8sClient.Get(context.TODO(), predictorServiceKey, actualService) }, timeout).
-					Should(Succeed())
-
-				Expect(actualService.Spec.Template.Annotations[autoscaling.InitialScaleAnnotationKey]).To(Equal("0"))
-			})
-		})
-		When("a Serverless InferenceService is created with an initial scale annotation and valid non-zero integer value", func() {
-			It("should override the default initial scale value with the annotation value", func() {
-				// Create configmap
-				configMap := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      constants.InferenceServiceConfigMapName,
-						Namespace: constants.KServeNamespace,
-					},
-					Data: configs,
-				}
-				Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
-				defer k8sClient.Delete(context.TODO(), configMap)
-
-				// Create InferenceService
-				serviceName := "initialscale5"
-				expectedRequest := reconcile.Request{NamespacedName: types.NamespacedName{Name: serviceName, Namespace: "default"}}
-				serviceKey := expectedRequest.NamespacedName
-				storageUri := "s3://test/mnist/export"
-				ctx := context.Background()
-				var minScale int32 = 2
-				isvc := &v1beta1.InferenceService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      serviceKey.Name,
-						Namespace: serviceKey.Namespace,
-						Annotations: map[string]string{
-							"serving.kserve.io/deploymentMode":    "Serverless",
-							autoscaling.InitialScaleAnnotationKey: "3",
-						},
-					},
-					Spec: v1beta1.InferenceServiceSpec{
-						Predictor: v1beta1.PredictorSpec{
-							ComponentExtensionSpec: v1beta1.ComponentExtensionSpec{
-								MinReplicas: &minScale,
-							},
-							Tensorflow: &v1beta1.TFServingSpec{
-								PredictorExtensionSpec: v1beta1.PredictorExtensionSpec{
-									StorageURI:     &storageUri,
-									RuntimeVersion: proto.String("1.14.0"),
-									Container: corev1.Container{
-										Name:      constants.InferenceServiceContainerName,
-										Resources: defaultResource,
-									},
-								},
-							},
-						},
-					},
-				}
-				Expect(k8sClient.Create(ctx, isvc)).Should(Succeed())
-				defer k8sClient.Delete(ctx, isvc)
-
-				predictorServiceKey := types.NamespacedName{
-					Name:      constants.PredictorServiceName(serviceKey.Name),
-					Namespace: serviceKey.Namespace,
-				}
-				actualService := &knservingv1.Service{}
-				Eventually(func() error { return k8sClient.Get(context.TODO(), predictorServiceKey, actualService) }, timeout).
-					Should(Succeed())
-
-				Expect(actualService.Spec.Template.Annotations[autoscaling.InitialScaleAnnotationKey]).To(Equal("3"))
-			})
-		})
-		When("a Serverless InferenceService is created with an initial scale annotation and invalid non-integer value", func() {
-			It("should ignore the annotation", func() {
-				// Create configmap
-				configMap := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      constants.InferenceServiceConfigMapName,
-						Namespace: constants.KServeNamespace,
-					},
-					Data: configs,
-				}
-				Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
-				defer k8sClient.Delete(context.TODO(), configMap)
-
-				// Create InferenceService
-				serviceName := "initialscale6"
-				expectedRequest := reconcile.Request{NamespacedName: types.NamespacedName{Name: serviceName, Namespace: "default"}}
-				serviceKey := expectedRequest.NamespacedName
-				storageUri := "s3://test/mnist/export"
-				ctx := context.Background()
-				var minScale int32 = 2
-				isvc := &v1beta1.InferenceService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      serviceKey.Name,
-						Namespace: serviceKey.Namespace,
-						Annotations: map[string]string{
-							"serving.kserve.io/deploymentMode":    "Serverless",
-							autoscaling.InitialScaleAnnotationKey: "non-integer",
-						},
-					},
-					Spec: v1beta1.InferenceServiceSpec{
-						Predictor: v1beta1.PredictorSpec{
-							ComponentExtensionSpec: v1beta1.ComponentExtensionSpec{
-								MinReplicas: &minScale,
-							},
-							Tensorflow: &v1beta1.TFServingSpec{
-								PredictorExtensionSpec: v1beta1.PredictorExtensionSpec{
-									StorageURI:     &storageUri,
-									RuntimeVersion: proto.String("1.14.0"),
-									Container: corev1.Container{
-										Name:      constants.InferenceServiceContainerName,
-										Resources: defaultResource,
-									},
-								},
-							},
-						},
-					},
-				}
-				Expect(k8sClient.Create(ctx, isvc)).Should(Succeed())
-				defer k8sClient.Delete(ctx, isvc)
-
-				predictorServiceKey := types.NamespacedName{
-					Name:      constants.PredictorServiceName(serviceKey.Name),
-					Namespace: serviceKey.Namespace,
-				}
-				actualService := &knservingv1.Service{}
-				Eventually(func() error { return k8sClient.Get(context.TODO(), predictorServiceKey, actualService) }, timeout).
-					Should(Succeed())
-
-				Expect(actualService.Spec.Template.Annotations).NotTo(HaveKey(autoscaling.InitialScaleAnnotationKey))
-			})
-		})
-	})
+	// NOTE: Initial scale annotation tests have been moved to initial_scale_test.go as table-driven unit tests
+	// This provides better performance and coverage for the annotation processing logic
 
 	Context("When creating inference service with predictor", func() {
 		It("Should have knative service created", func() {
@@ -503,7 +72,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
@@ -543,7 +112,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									"--model_base_path=/mnt/models",
 									"--rest_api_timeout_in_ms=60000",
 								},
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 						ImagePullSecrets: []corev1.LocalObjectReference{
@@ -593,7 +162,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								RuntimeVersion: proto.String("1.14.0"),
 								Container: corev1.Container{
 									Name:      constants.InferenceServiceContainerName,
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
@@ -663,7 +232,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 												"--model_base_path=" + constants.DefaultModelLocalMountPath,
 												"--rest_api_timeout_in_ms=60000",
 											},
-											Resources: defaultResource,
+											Resources: fixtures.DefaultResource,
 										},
 									},
 									AutomountServiceAccountToken: proto.Bool(false),
@@ -812,7 +381,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
@@ -842,7 +411,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								RuntimeVersion: proto.String("1.14.0"),
 								Container: corev1.Container{
 									Name:      constants.InferenceServiceContainerName,
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
@@ -876,89 +445,26 @@ var _ = Describe("v1beta1 inference service controller", func() {
 	})
 
 	Context("When creating inference service with `serving.kserve.io/stop`", func() {
-		// --- Default values ---
+		// --- Default values using builders ---
 		defaultIsvc := func(namespace string, name string, storageUri string) *v1beta1.InferenceService {
-			predictor := v1beta1.PredictorSpec{
-				ComponentExtensionSpec: v1beta1.ComponentExtensionSpec{
-					MinReplicas: ptr.To(int32(1)),
-					MaxReplicas: 3,
-				},
-				Tensorflow: &v1beta1.TFServingSpec{
-					PredictorExtensionSpec: v1beta1.PredictorExtensionSpec{
-						StorageURI:     &storageUri,
-						RuntimeVersion: proto.String("1.14.0"),
-						Container: corev1.Container{
-							Name:      constants.InferenceServiceContainerName,
-							Resources: defaultResource,
-						},
-					},
-				},
-			}
-			isvc := &v1beta1.InferenceService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-					Annotations: map[string]string{
-						"serving.kserve.io/deploymentMode": "Serverless",
-					},
-				},
-
-				Spec: v1beta1.InferenceServiceSpec{
-					Predictor: predictor,
-				},
-			}
-			return isvc
+			return NewInferenceServiceBuilder(name, namespace, fixtures).
+				WithTensorflowPredictor(storageUri, "1.14.0").
+				WithMinReplicas(1).
+				WithMaxReplicas(3).
+				Build()
 		}
 
 		createServingRuntime := func(namespace string, name string) *v1alpha1.ServingRuntime {
-			// Define and create serving runtime
-			servingRuntime := &v1alpha1.ServingRuntime{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-				},
-				Spec: v1alpha1.ServingRuntimeSpec{
-					SupportedModelFormats: []v1alpha1.SupportedModelFormat{
-						{
-							Name:       "tensorflow",
-							Version:    proto.String("1"),
-							AutoSelect: proto.Bool(true),
-						},
-					},
-					ServingRuntimePodSpec: v1alpha1.ServingRuntimePodSpec{
-						Containers: []corev1.Container{
-							{
-								Name:    constants.InferenceServiceContainerName,
-								Image:   "tensorflow/serving:1.14.0",
-								Command: []string{"/usr/bin/tensorflow_model_server"},
-								Args: []string{
-									"--port=9000",
-									"--rest_api_port=8080",
-									"--model_base_path=/mnt/models",
-									"--rest_api_timeout_in_ms=60000",
-								},
-								Resources: defaultResource,
-							},
-						},
-						ImagePullSecrets: []corev1.LocalObjectReference{
-							{Name: "sr-image-pull-secret"},
-						},
-					},
-					Disabled: proto.Bool(false),
-				},
-			}
-			return servingRuntime
+			return NewServingRuntimeBuilder(name, namespace, fixtures).
+				WithTensorflowSupport("1").
+				WithImagePullSecrets("sr-image-pull-secret").
+				Build()
 		}
 
 		createInferenceServiceConfigMap := func() *corev1.ConfigMap {
-			configMap := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      constants.InferenceServiceConfigMapName,
-					Namespace: constants.KServeNamespace,
-				},
-				Data: configs,
-			}
-			return configMap
+			return NewConfigMapBuilder(constants.InferenceServiceConfigMapName, constants.KServeNamespace).
+				WithKServeConfigs(fixtures).
+				Build()
 		}
 
 		// --- Reusable Check Functions ---
@@ -1406,7 +912,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 							RuntimeVersion: proto.String("1.14.0"),
 							Container: corev1.Container{
 								Name:      constants.InferenceServiceContainerName,
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 					},
@@ -1420,7 +926,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 						Containers: []corev1.Container{
 							{
 								Image:     "transformer:v1",
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 					},
@@ -1697,7 +1203,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 							RuntimeVersion: proto.String("1.14.0"),
 							Container: corev1.Container{
 								Name:      constants.InferenceServiceContainerName,
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 					},
@@ -1709,7 +1215,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 							Config: map[string]string{"nb_classes": "10"},
 							Container: corev1.Container{
 								Name:      constants.InferenceServiceContainerName,
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 							RuntimeVersion: proto.String("latest"),
 						},
@@ -2044,7 +1550,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 							Containers: []corev1.Container{
 								{
 									Image:     "transformer:v1",
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
@@ -2065,7 +1571,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
@@ -2095,7 +1601,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									"--model_base_path=/mnt/models",
 									"--rest_api_timeout_in_ms=60000",
 								},
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 					},
@@ -2157,7 +1663,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 												constants.InferenceServiceDefaultHttpPort,
 											},
 											Name:      constants.InferenceServiceContainerName,
-											Resources: defaultResource,
+											Resources: fixtures.DefaultResource,
 										},
 									},
 									AutomountServiceAccountToken: proto.Bool(false),
@@ -2338,7 +1844,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 						Name:      constants.InferenceServiceConfigMapName,
 						Namespace: constants.KServeNamespace,
 					},
-					Data: configs,
+					Data: fixtures.Configs,
 				}
 				Expect(k8sClient.Create(ctx, configMap)).NotTo(HaveOccurred())
 				defer k8sClient.Delete(ctx, configMap)
@@ -2368,7 +1874,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 										"--model_base_path=/mnt/models",
 										"--rest_api_timeout_in_ms=60000",
 									},
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
@@ -2412,7 +1918,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									{
 										Name:      constants.TransformerContainerName,
 										Image:     "transformer:v1",
-										Resources: defaultResource,
+										Resources: fixtures.DefaultResource,
 										Ports: []corev1.ContainerPort{
 											{
 												ContainerPort: httpPort,
@@ -2480,12 +1986,12 @@ var _ = Describe("v1beta1 inference service controller", func() {
 													"--model_base_path=" + constants.DefaultModelLocalMountPath,
 													"--rest_api_timeout_in_ms=60000",
 												},
-												Resources: defaultResource,
+												Resources: fixtures.DefaultResource,
 											},
 											{
 												Name:      constants.TransformerContainerName,
 												Image:     "transformer:v1",
-												Resources: defaultResource,
+												Resources: fixtures.DefaultResource,
 												Ports: []corev1.ContainerPort{
 													{
 														ContainerPort: httpPort,
@@ -2648,7 +2154,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 						Name:      constants.InferenceServiceConfigMapName,
 						Namespace: constants.KServeNamespace,
 					},
-					Data: configs,
+					Data: fixtures.Configs,
 				}
 				Expect(k8sClient.Create(ctx, configMap)).NotTo(HaveOccurred())
 				defer k8sClient.Delete(ctx, configMap)
@@ -2678,7 +2184,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 										"--model_base_path=/mnt/models",
 										"--rest_api_timeout_in_ms=60000",
 									},
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 								{
 									Name:  constants.TransformerContainerName,
@@ -2686,7 +2192,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									Args: []string{
 										"--model_name={{.Name}}",
 									},
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 									Ports: []corev1.ContainerPort{
 										{
 											ContainerPort: httpPort,
@@ -2790,13 +2296,13 @@ var _ = Describe("v1beta1 inference service controller", func() {
 													"--model_base_path=" + constants.DefaultModelLocalMountPath,
 													"--rest_api_timeout_in_ms=60000",
 												},
-												Resources: defaultResource,
+												Resources: fixtures.DefaultResource,
 											},
 											{
 												Name:      constants.TransformerContainerName,
 												Image:     "transformer:v1",
 												Args:      []string{"--model_name=" + serviceName},
-												Resources: defaultResource,
+												Resources: fixtures.DefaultResource,
 												Ports: []corev1.ContainerPort{
 													{
 														ContainerPort: httpPort,
@@ -2959,7 +2465,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 						Name:      constants.InferenceServiceConfigMapName,
 						Namespace: constants.KServeNamespace,
 					},
-					Data: configs,
+					Data: fixtures.Configs,
 				}
 				Expect(k8sClient.Create(ctx, configMap)).NotTo(HaveOccurred())
 				defer k8sClient.Delete(ctx, configMap)
@@ -2989,7 +2495,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 										"--model_base_path=/mnt/models",
 										"--rest_api_timeout_in_ms=60000",
 									},
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 								{
 									Name:  constants.TransformerContainerName,
@@ -2997,7 +2503,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									Args: []string{
 										"--model_name={{.Name}}",
 									},
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 									Ports: []corev1.ContainerPort{
 										{
 											ContainerPort: httpPort,
@@ -3054,7 +2560,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 											"--http-port",
 											strconv.Itoa(int(httpPort)),
 										},
-										Resources: defaultResource,
+										Resources: fixtures.DefaultResource,
 									},
 								},
 							},
@@ -3117,7 +2623,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 													"--model_base_path=" + constants.DefaultModelLocalMountPath,
 													"--rest_api_timeout_in_ms=60000",
 												},
-												Resources: defaultResource,
+												Resources: fixtures.DefaultResource,
 											},
 											{
 												Name:  constants.TransformerContainerName,
@@ -3126,7 +2632,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 													"transformer",
 												},
 												Args:      []string{"--model_name=" + serviceName, "--http-port", strconv.Itoa(int(httpPort))},
-												Resources: defaultResource,
+												Resources: fixtures.DefaultResource,
 												Ports: []corev1.ContainerPort{
 													{
 														ContainerPort: httpPort,
@@ -3290,7 +2796,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 						Name:      constants.InferenceServiceConfigMapName,
 						Namespace: constants.KServeNamespace,
 					},
-					Data: configs,
+					Data: fixtures.Configs,
 				}
 				Expect(k8sClient.Create(ctx, configMap)).NotTo(HaveOccurred())
 				defer k8sClient.Delete(ctx, configMap)
@@ -3326,12 +2832,12 @@ var _ = Describe("v1beta1 inference service controller", func() {
 											"--rest_api_port=8080",
 											"--model_base_path=/mnt/models",
 										},
-										Resources: defaultResource,
+										Resources: fixtures.DefaultResource,
 									},
 									{
 										Name:      constants.TransformerContainerName,
 										Image:     "transformer:v1",
-										Resources: defaultResource,
+										Resources: fixtures.DefaultResource,
 										Ports: []corev1.ContainerPort{
 											{
 												ContainerPort: httpPort,
@@ -3396,12 +2902,12 @@ var _ = Describe("v1beta1 inference service controller", func() {
 													"--rest_api_port=" + v1beta1.TensorflowServingRestPort,
 													"--model_base_path=" + constants.DefaultModelLocalMountPath,
 												},
-												Resources: defaultResource,
+												Resources: fixtures.DefaultResource,
 											},
 											{
 												Name:      constants.TransformerContainerName,
 												Image:     "transformer:v1",
-												Resources: defaultResource,
+												Resources: fixtures.DefaultResource,
 												Ports: []corev1.ContainerPort{
 													{
 														ContainerPort: httpPort,
@@ -3554,7 +3060,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
@@ -3584,7 +3090,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									"--model_base_path=/mnt/models",
 									"--rest_api_timeout_in_ms=60000",
 								},
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 					},
@@ -3617,7 +3123,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								RuntimeVersion: proto.String("1.14.0"),
 								Container: corev1.Container{
 									Name:      constants.InferenceServiceContainerName,
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
@@ -3796,7 +3302,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 				Name:      constants.InferenceServiceConfigMapName,
 				Namespace: constants.KServeNamespace,
 			},
-			Data: configs,
+			Data: fixtures.Configs,
 		}
 
 		serviceName := "bar"
@@ -3899,7 +3405,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									"--model_base_path=/mnt/models",
 									"--rest_api_timeout_in_ms=60000",
 								},
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 						ImagePullSecrets: []corev1.LocalObjectReference{
@@ -3959,7 +3465,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
@@ -4012,7 +3518,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 												"--model_base_path=/mnt/models",
 												"--rest_api_timeout_in_ms=60000",
 											},
-											Resources: defaultResource,
+											Resources: fixtures.DefaultResource,
 										},
 									},
 									ImagePullSecrets: []corev1.LocalObjectReference{
@@ -4080,7 +3586,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
@@ -4146,7 +3652,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									"--model_base_path=/mnt/models",
 									"--rest_api_timeout_in_ms=60000",
 								},
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 					},
@@ -4187,7 +3693,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
@@ -4234,7 +3740,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
@@ -4264,7 +3770,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									"--model_base_path=/mnt/models",
 									"--rest_api_timeout_in_ms=60000",
 								},
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 					},
@@ -4338,7 +3844,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 						RuntimeVersion: proto.String("1.14.0"),
 						Container: corev1.Container{
 							Name:      constants.InferenceServiceContainerName,
-							Resources: defaultResource,
+							Resources: fixtures.DefaultResource,
 							VolumeMounts: []corev1.VolumeMount{
 								{Name: "predictor-volume"},
 							},
@@ -4386,7 +3892,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									"--model_base_path=/mnt/models",
 									"--rest_api_timeout_in_ms=60000",
 								},
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 						ImagePullSecrets: []corev1.LocalObjectReference{
@@ -4406,7 +3912,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
@@ -4501,7 +4007,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
@@ -4531,7 +4037,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									"--model_base_path=/mnt/models",
 									"--rest_api_timeout_in_ms=60000",
 								},
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 					},
@@ -4585,7 +4091,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								"gs://kserve-invalid/models/sklearn/1.0/model",
 								"/mnt/models",
 							},
-							Resources: defaultResource,
+							Resources: fixtures.DefaultResource,
 						},
 					},
 					Containers: []corev1.Container{
@@ -4617,7 +4123,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									Value: serviceName + "-predictor-" + namespace,
 								},
 							},
-							Resources: defaultResource,
+							Resources: fixtures.DefaultResource,
 						},
 					},
 				},
@@ -4681,7 +4187,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 			By("By creating a new InferenceService")
 			// Create configmap
 			copiedConfigs := make(map[string]string)
-			for key, value := range configs {
+			for key, value := range fixtures.Configs {
 				if key == "ingress" {
 					copiedConfigs[key] = `{
 						"kserveIngressGateway": "kserve/kserve-ingress-gateway",
@@ -4725,7 +4231,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								RuntimeVersion: proto.String("1.14.0"),
 								Container: corev1.Container{
 									Name:      constants.InferenceServiceContainerName,
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
@@ -4788,7 +4294,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
@@ -4817,7 +4323,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								RuntimeVersion: proto.String("1.14.0"),
 								Container: corev1.Container{
 									Name:      constants.InferenceServiceContainerName,
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
@@ -4840,7 +4346,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 		It("Should not create a global cabundle configmap in a user namespace when the target cabundle configmap in the 'inferenceservice-config' configmap does not exist", func() {
 			// Create configmap
 			copiedConfigs := make(map[string]string)
-			for key, value := range configs {
+			for key, value := range fixtures.Configs {
 				if key == "storageInitializer" {
 					copiedConfigs[key] = `{
 							"image" : "kserve/storage-initializer:latest",
@@ -4891,7 +4397,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								RuntimeVersion: proto.String("1.14.0"),
 								Container: corev1.Container{
 									Name:      constants.InferenceServiceContainerName,
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
@@ -4915,7 +4421,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 		It("Should not create a global cabundle configmap in a user namespace when the cabundle.crt file data does not exist in the target cabundle configmap in the 'inferenceservice-config' configmap", func() {
 			// Create configmap
 			copiedConfigs := make(map[string]string)
-			for key, value := range configs {
+			for key, value := range fixtures.Configs {
 				if key == "storageInitializer" {
 					copiedConfigs[key] = `{
 							"image" : "kserve/storage-initializer:latest",
@@ -4979,7 +4485,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								RuntimeVersion: proto.String("1.14.0"),
 								Container: corev1.Container{
 									Name:      constants.InferenceServiceContainerName,
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
@@ -5004,7 +4510,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 		It("Should create a global cabundle configmap in a user namespace when it meets all conditions and an inferenceservice is created", func() {
 			// Create configmap
 			copiedConfigs := make(map[string]string)
-			for key, value := range configs {
+			for key, value := range fixtures.Configs {
 				if key == "storageInitializer" {
 					copiedConfigs[key] = `{
 					"image" : "kserve/storage-initializer:latest",
@@ -5069,7 +4575,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								RuntimeVersion: proto.String("1.14.0"),
 								Container: corev1.Container{
 									Name:      constants.InferenceServiceContainerName,
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
@@ -5099,7 +4605,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 					Name:      constants.InferenceServiceConfigMapName,
 					Namespace: constants.KServeNamespace,
 				},
-				Data: configs,
+				Data: fixtures.Configs,
 			}
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
@@ -5129,7 +4635,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 									"--model_base_path=/mnt/models",
 									"--rest_api_timeout_in_ms=60000",
 								},
-								Resources: defaultResource,
+								Resources: fixtures.DefaultResource,
 							},
 						},
 					},
@@ -5160,7 +4666,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								RuntimeVersion: proto.String("1.14.0"),
 								Container: corev1.Container{
 									Name:      constants.InferenceServiceContainerName,
-									Resources: defaultResource,
+									Resources: fixtures.DefaultResource,
 								},
 							},
 						},
