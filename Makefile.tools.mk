@@ -9,6 +9,7 @@ PYTHON_BIN = $(PYTHON_VENV)/bin
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 CONTROLLER_GEN = $(LOCALBIN)/controller-gen
 ENVTEST = $(LOCALBIN)/setup-envtest
+GINKGO = $(LOCALBIN)/ginkgo
 YQ = $(LOCALBIN)/yq
 HELM_DOCS = $(LOCALBIN)/helm-docs
 BLACK_FMT = $(PYTHON_BIN)/black
@@ -19,6 +20,7 @@ UV = $(PYTHON_BIN)/uv
 GOLANGCI_LINT_VERSION ?= v1.64.8
 CONTROLLER_TOOLS_VERSION ?= v0.16.2
 ENVTEST_VERSION ?= latest
+GINKGO_VERSION ?= v2.13.2
 YQ_VERSION ?= v4.28.1
 HELM_DOCS_VERSION ?= v1.12.0
 BLACK_FMT_VERSION ?= 24.3
@@ -44,6 +46,12 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST)
 $(ENVTEST): $(LOCALBIN)
 	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
+
+## Download ginkgo locally if necessary.
+.PHONY: ginkgo
+ginkgo: $(GINKGO)
+$(GINKGO): $(LOCALBIN)
+	$(call go-install-tool,$(GINKGO),github.com/onsi/ginkgo/v2/ginkgo,$(GINKGO_VERSION))
 
 ## Download yq locally if necessary.
 .PHONY: yq

@@ -185,6 +185,23 @@ clean:
 test: fmt vet manifests envtest test-qpext
 	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m $$(go list ./pkg/...) ./cmd/... -coverprofile coverage.out -coverpkg ./pkg/... ./cmd...
 
+test-controller: fmt vet envtest ginkgo
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) run -v --trace --focus-file="controller_test.go" --coverprofile=coverage-controller.out --covermode=atomic --output-dir=. ./pkg/controller/v1beta1/inferenceservice/
+
+test-rawkube: fmt vet envtest ginkgo
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) run -v --trace --focus-file="rawkube_controller_test.go" --coverprofile=coverage-controller-rawkube.out --covermode=atomic --output-dir=. ./pkg/controller/v1beta1/inferenceservice/
+
+test-other: fmt vet envtest
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m $$(go list ./pkg/... | grep -v "./pkg/controller/v1beta1/inferenceservice") ./cmd/... -coverprofile coverage-other.out -coverpkg ./pkg/... ./cmd...
+
+test-parallel: fmt vet manifests envtest
+	@echo "Running tests in parallel..."
+	@make test-qpext test-controller test-rawkube test-other -j4
+	@echo "Merging coverage files..."
+	@./merge-coverage.sh coverage.out coverage-controller.out coverage-controller-rawkube.out coverage-other.out
+	@echo "Running coverage analysis..."
+	@./coverage.sh
+
 test-qpext:
 	cd qpext && go test -v ./... -cover
 
