@@ -52,11 +52,13 @@ import (
 )
 
 var _ = Describe("v1beta1 inference service controller", func() {
-	// Define utility constants for object names and testing timeouts/durations and intervals.
+	// Phase 1 Optimization: Reduced timeouts for faster test execution
 	const (
-		timeout  = time.Second * 10
-		interval = time.Millisecond * 250
-		domain   = "example.com"
+		fastTimeout   = time.Second * 5        // Reduced from 10s
+		mediumTimeout = time.Second * 8        // For complex operations
+		timeout       = time.Second * 5        // Kept for compatibility
+		interval      = time.Millisecond * 200 // Slightly reduced polling
+		domain        = "example.com"
 	)
 	var (
 		defaultResource = corev1.ResourceRequirements{
@@ -95,17 +97,76 @@ var _ = Describe("v1beta1 inference service controller", func() {
 		}
 	)
 
+	// Phase 1 Optimization: Helper functions to reduce code duplication
+	var (
+		// createTestConfigMap creates a standard configmap for testing with optimized error handling
+		createTestConfigMap = func() *corev1.ConfigMap {
+			return &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      constants.InferenceServiceConfigMapName,
+					Namespace: constants.KServeNamespace,
+				},
+				Data: configs,
+			}
+		}
+
+		// createBasicInferenceService creates a basic InferenceService for testing with common patterns
+		createBasicInferenceService = func(name, namespace string, annotations map[string]string) *v1beta1.InferenceService {
+			storageUri := "s3://test/mnist/export"
+			var minScale int32 = 2
+			baseAnnotations := map[string]string{
+				"serving.kserve.io/deploymentMode": "Serverless",
+			}
+			// Merge additional annotations
+			for k, v := range annotations {
+				baseAnnotations[k] = v
+			}
+
+			return &v1beta1.InferenceService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        name,
+					Namespace:   namespace,
+					Annotations: baseAnnotations,
+				},
+				Spec: v1beta1.InferenceServiceSpec{
+					Predictor: v1beta1.PredictorSpec{
+						ComponentExtensionSpec: v1beta1.ComponentExtensionSpec{
+							MinReplicas: &minScale,
+						},
+						Tensorflow: &v1beta1.TFServingSpec{
+							PredictorExtensionSpec: v1beta1.PredictorExtensionSpec{
+								StorageURI:     &storageUri,
+								RuntimeVersion: proto.String("1.14.0"),
+								Container: corev1.Container{
+									Name:      constants.InferenceServiceContainerName,
+									Resources: defaultResource,
+								},
+							},
+						},
+					},
+				},
+			}
+		}
+
+		// waitForPredictorService waits for predictor service to be ready with optimized timeout
+		waitForPredictorService = func(serviceKey types.NamespacedName) *knservingv1.Service {
+			predictorServiceKey := types.NamespacedName{
+				Name:      constants.PredictorServiceName(serviceKey.Name),
+				Namespace: serviceKey.Namespace,
+			}
+			actualService := &knservingv1.Service{}
+			Eventually(func() error {
+				return k8sClient.Get(context.TODO(), predictorServiceKey, actualService)
+			}, fastTimeout).Should(Succeed())
+			return actualService
+		}
+	)
+
 	Context("with knative configured to not allow zero initial scale", func() {
 		When("a Serverless InferenceService is created with an initial scale annotation and value of zero", func() {
 			It("should ignore the annotation", func() {
-				// Create configmap
-				configMap := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      constants.InferenceServiceConfigMapName,
-						Namespace: constants.KServeNamespace,
-					},
-					Data: configs,
-				}
+				// Create configmap using helper function
+				configMap := createTestConfigMap()
 				Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 				defer k8sClient.Delete(context.TODO(), configMap)
 
@@ -113,46 +174,16 @@ var _ = Describe("v1beta1 inference service controller", func() {
 				serviceName := "initialscale1"
 				expectedRequest := reconcile.Request{NamespacedName: types.NamespacedName{Name: serviceName, Namespace: "default"}}
 				serviceKey := expectedRequest.NamespacedName
-				storageUri := "s3://test/mnist/export"
 				ctx := context.Background()
-				var minScale int32 = 2
-				isvc := &v1beta1.InferenceService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      serviceKey.Name,
-						Namespace: serviceKey.Namespace,
-						Annotations: map[string]string{
-							"serving.kserve.io/deploymentMode":    "Serverless",
-							autoscaling.InitialScaleAnnotationKey: "0",
-						},
-					},
-					Spec: v1beta1.InferenceServiceSpec{
-						Predictor: v1beta1.PredictorSpec{
-							ComponentExtensionSpec: v1beta1.ComponentExtensionSpec{
-								MinReplicas: &minScale,
-							},
-							Tensorflow: &v1beta1.TFServingSpec{
-								PredictorExtensionSpec: v1beta1.PredictorExtensionSpec{
-									StorageURI:     &storageUri,
-									RuntimeVersion: proto.String("1.14.0"),
-									Container: corev1.Container{
-										Name:      constants.InferenceServiceContainerName,
-										Resources: defaultResource,
-									},
-								},
-							},
-						},
-					},
-				}
+				// Create InferenceService using helper function
+				isvc := createBasicInferenceService(serviceKey.Name, serviceKey.Namespace, map[string]string{
+					autoscaling.InitialScaleAnnotationKey: "0",
+				})
 				Expect(k8sClient.Create(ctx, isvc)).Should(Succeed())
 				defer k8sClient.Delete(ctx, isvc)
 
-				predictorServiceKey := types.NamespacedName{
-					Name:      constants.PredictorServiceName(serviceKey.Name),
-					Namespace: serviceKey.Namespace,
-				}
-				actualService := &knservingv1.Service{}
-				Eventually(func() error { return k8sClient.Get(context.TODO(), predictorServiceKey, actualService) }, timeout).
-					Should(Succeed())
+				// Use helper for predictor service waiting
+				actualService := waitForPredictorService(serviceKey)
 
 				Expect(actualService.Spec.Template.Annotations).NotTo(HaveKey(autoscaling.InitialScaleAnnotationKey))
 			})
@@ -220,14 +251,8 @@ var _ = Describe("v1beta1 inference service controller", func() {
 		})
 		When("a Serverless InferenceService is created with an initial scale annotation and invalid non-integer value", func() {
 			It("should ignore the annotation", func() {
-				// Create configmap
-				configMap := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      constants.InferenceServiceConfigMapName,
-						Namespace: constants.KServeNamespace,
-					},
-					Data: configs,
-				}
+				// Create configmap using helper function
+				configMap := createTestConfigMap()
 				Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 				defer k8sClient.Delete(context.TODO(), configMap)
 
@@ -282,7 +307,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 	})
 	Context("with knative configured to allow zero initial scale", func() {
 		BeforeEach(func() {
-			time.Sleep(10 * time.Second)
+			time.Sleep(3 * time.Second) // Phase 1 optimization: reduced from 10s
 			// Patch the existing config-autoscaler configmap to set allow-zero-initial-scale to true
 			configAutoscaler := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -786,7 +811,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 			updatedIsvc.Labels = labels
 
 			Expect(k8sClient.Update(ctx, updatedIsvc)).NotTo(HaveOccurred())
-			time.Sleep(10 * time.Second)
+			time.Sleep(3 * time.Second) // Phase 1 optimization: reduced from 10s
 			updatedVirtualService := &istioclientv1beta1.VirtualService{}
 			Eventually(func() error {
 				return k8sClient.Get(ctx, types.NamespacedName{
