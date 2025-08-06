@@ -188,6 +188,27 @@ test: fmt vet manifests envtest test-qpext
 test-qpext:
 	cd qpext && go test -v ./... -cover
 
+# Inference Service Controller Tests (separated for faster CI)
+# These tests are tagged and can be run separately to improve CI performance:
+# - test-controller: runs controller_test.go (tagged with 'controller_tests')
+# - test-rawkube: runs rawkube_controller_test.go (tagged with 'rawkube_tests')
+# - test-inferenceservice-separate: runs both separated test suites
+
+# Run controller tests only
+test-controller: fmt vet manifests envtest
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m -tags=controller_tests ./pkg/controller/v1beta1/inferenceservice/... -coverprofile coverage-controller.out
+
+# Run rawkube controller tests only
+test-rawkube: fmt vet manifests envtest
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m -tags=rawkube_tests ./pkg/controller/v1beta1/inferenceservice/... -coverprofile coverage-rawkube.out
+
+# Run both controller and rawkube tests separately
+test-inferenceservice-separate: test-controller test-rawkube
+
+# Run all other tests excluding the inference service controller tests (which are now tagged)
+test-others: fmt vet manifests envtest test-qpext
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m $$(go list ./pkg/... | grep -v "controller/v1beta1/inferenceservice$$") ./cmd/... -coverprofile coverage-others.out -coverpkg ./pkg/... ./cmd...
+
 # Build manager binary
 manager: generate fmt vet go-lint
 	go build -o bin/manager ./cmd/manager

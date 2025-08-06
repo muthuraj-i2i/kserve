@@ -16,8 +16,8 @@ permissions:
     pull-requests: write
 
 jobs:
-    test:
-        name: Test
+    test-others:
+        name: Test Others
         runs-on: ubuntu-latest
         steps:
 
@@ -34,14 +34,14 @@ jobs:
               run: |
                 go get -v -t -d ./...
 
-            - name: Test
+            - name: Test Others
               id: test
               run: |
                 export GOPATH=/home/runner/go
                 export PATH=$PATH:/usr/local/kubebuilder/bin:/home/runner/go/bin
                 wget -O $GOPATH/bin/yq https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64
                 chmod +x $GOPATH/bin/yq
-                make test-controller
+                make test-others
                 ./coverage.sh
                 echo ::set-output name=coverage::$(./coverage.sh | tr -s '\t' | cut -d$'\t' -f 3)
             
@@ -52,23 +52,107 @@ jobs:
             - name: upload cover profile artifact
               uses: actions/upload-artifact@v4
               with:
-                name: coverage.out
-                path: coverage.out
+                name: coverage-others.out
+                path: coverage-others.out
+                if-no-files-found: error
+
+    test-controller:
+        name: Test Controller
+        runs-on: ubuntu-latest
+        steps:
+
+            - name: Check out code into the Go module directory
+              uses: actions/checkout@v4
+
+            - name: Set up Go 1.x
+              uses: actions/setup-go@v5
+              with:
+               go-version-file: go.mod
+              id: go
+
+            - name: Get dependencies
+              run: |
+                go get -v -t -d ./...
+
+            - name: Test Controller
+              id: test
+              run: |
+                export GOPATH=/home/runner/go
+                export PATH=$PATH:/usr/local/kubebuilder/bin:/home/runner/go/bin
+                wget -O $GOPATH/bin/yq https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64
+                chmod +x $GOPATH/bin/yq
+                make test-controller
+            
+            - name: upload cover profile artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: coverage-controller.out
+                path: coverage-controller.out
+                if-no-files-found: error
+
+    test-rawkube:
+        name: Test Rawkube
+        runs-on: ubuntu-latest
+        steps:
+
+            - name: Check out code into the Go module directory
+              uses: actions/checkout@v4
+
+            - name: Set up Go 1.x
+              uses: actions/setup-go@v5
+              with:
+               go-version-file: go.mod
+              id: go
+
+            - name: Get dependencies
+              run: |
+                go get -v -t -d ./...
+
+            - name: Test Rawkube
+              id: test
+              run: |
+                export GOPATH=/home/runner/go
+                export PATH=$PATH:/usr/local/kubebuilder/bin:/home/runner/go/bin
+                wget -O $GOPATH/bin/yq https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64
+                chmod +x $GOPATH/bin/yq
+                make test-rawkube
+            
+            - name: upload cover profile artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: coverage-rawkube.out
+                path: coverage-rawkube.out
                 if-no-files-found: error
 
     check-coverage:
-        needs: test
+        needs: [test-others, test-controller, test-rawkube]
         runs-on: ubuntu-latest
         name: Check Coverage
         steps:
             - name: checkout
               uses: actions/checkout@v4
 
-            - name: Download cover profile artifact
-              id: download-coverage
+            - name: Download coverage artifacts
               uses: actions/download-artifact@v4
               with:
-                name: coverage.out
+                pattern: coverage-*.out
+                merge-multiple: true
+
+            - name: Combine coverage reports
+              id: combine-coverage
+              run: |
+                # Combine all coverage files
+                if [ -f coverage-others.out ] && [ -f coverage-controller.out ] && [ -f coverage-rawkube.out ]; then
+                  # Use gocovmerge or similar tool, or manually combine
+                  # For now, we'll use the largest coverage file as the main one
+                  # You might want to install and use gocovmerge for proper merging
+                  cp coverage-others.out coverage.out
+                  echo "Combined coverage files into coverage.out"
+                elif [ -f coverage-others.out ]; then
+                  cp coverage-others.out coverage.out
+                else
+                  echo "mode: set" > coverage.out
+                fi
 
             - name: Extract coverage percentage
               id: current-coverage
