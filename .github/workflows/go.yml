@@ -141,17 +141,36 @@ jobs:
             - name: Combine coverage reports
               id: combine-coverage
               run: |
-                # Combine all coverage files
-                if [ -f coverage-others.out ] && [ -f coverage-controller.out ] && [ -f coverage-rawkube.out ]; then
-                  # Use gocovmerge or similar tool, or manually combine
-                  # For now, we'll use the largest coverage file as the main one
-                  # You might want to install and use gocovmerge for proper merging
-                  cp coverage-others.out coverage.out
-                  echo "Combined coverage files into coverage.out"
+                # Make merge script executable
+                chmod +x ./merge-coverage.sh
+                
+                # List downloaded files for debugging
+                echo "Downloaded files:"
+                ls -la *.out || echo "No .out files found"
+                
+                # Check if all coverage files exist
+                files_found=0
+                [ -f coverage-others.out ] && files_found=$((files_found + 1)) && echo "✓ coverage-others.out found"
+                [ -f coverage-controller.out ] && files_found=$((files_found + 1)) && echo "✓ coverage-controller.out found"  
+                [ -f coverage-rawkube.out ] && files_found=$((files_found + 1)) && echo "✓ coverage-rawkube.out found"
+                
+                # Properly merge coverage files using the existing script
+                if [ $files_found -eq 3 ]; then
+                  echo "All three coverage files found, merging..."
+                  ./merge-coverage.sh coverage.out coverage-others.out coverage-controller.out coverage-rawkube.out
+                  echo "Successfully merged all coverage files"
                 elif [ -f coverage-others.out ]; then
+                  echo "Using coverage-others.out as primary coverage file"
                   cp coverage-others.out coverage.out
                 else
-                  echo "mode: set" > coverage.out
+                  echo "Creating minimal coverage file"
+                  echo "mode: atomic" > coverage.out
+                fi
+                
+                # Verify the merged file
+                if [ -f coverage.out ]; then
+                  echo "Final coverage.out contains $(wc -l < coverage.out) lines"
+                  head -5 coverage.out
                 fi
 
             - name: Extract coverage percentage

@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
+	"knative.dev/pkg/apis"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -41,7 +42,6 @@ import (
 	"github.com/kserve/kserve/pkg/apis/serving/v1alpha1"
 	"github.com/kserve/kserve/pkg/apis/serving/v1beta1"
 	"github.com/kserve/kserve/pkg/constants"
-	"knative.dev/pkg/apis"
 )
 
 // Test timeout constants - optimized for faster execution
@@ -333,7 +333,7 @@ func ValidateDeploymentQuick(k8sClient client.Client, key types.NamespacedName, 
 		return nil
 	}
 
-	return fmt.Errorf("deployment validation failed: %v", lastErr)
+	return fmt.Errorf("deployment validation failed: %w", lastErr)
 }
 
 // ValidateServiceQuick performs essential service validation
@@ -350,7 +350,7 @@ func ValidateServiceQuick(k8sClient client.Client, key types.NamespacedName, tim
 		return nil
 	}
 
-	return fmt.Errorf("service validation failed: %v", lastErr)
+	return fmt.Errorf("service validation failed: %w", lastErr)
 }
 
 // ValidateHPAQuick performs essential HPA validation
@@ -367,7 +367,7 @@ func ValidateHPAQuick(k8sClient client.Client, key types.NamespacedName, timeout
 		return nil
 	}
 
-	return fmt.Errorf("HPA validation failed: %v", lastErr)
+	return fmt.Errorf("HPA validation failed: %w", lastErr)
 }
 
 // ValidateHTTPRouteQuick performs essential HTTPRoute validation
@@ -716,7 +716,7 @@ func CommonTestInferenceService(serviceName, namespace string, annotations map[s
 
 // ValidateAllStandardResources validates deployment, service, and HPA in sequence with optimized timeouts
 func ValidateAllStandardResources(k8sClient client.Client, serviceName, namespace string) error {
-	_, predictorKey, _, _ := CreateTestServiceKeys(serviceName, namespace)
+	predictorKey := GetPredictorKey(serviceName, namespace)
 
 	// Progressive validation - existence first, then details
 	if err := ValidateDeploymentQuick(k8sClient, predictorKey, FastTimeout, ""); err != nil {
@@ -781,7 +781,7 @@ func (ptm *ParallelTestManager) RunTestBatch(batch TestBatch) error {
 
 	// Wait for all tests to complete and collect errors
 	var errors []error
-	for i := 0; i < len(batch.TestFuncs); i++ {
+	for range len(batch.TestFuncs) {
 		if err := <-errChan; err != nil {
 			errors = append(errors, err)
 		}
@@ -812,7 +812,7 @@ func FastResourceCleanup(k8sClient client.Client, resources ...client.Object) er
 
 	// Wait for all deletions to complete
 	var errors []error
-	for i := 0; i < len(resources); i++ {
+	for range resources {
 		if err := <-errChan; err != nil {
 			errors = append(errors, err)
 		}
@@ -840,7 +840,7 @@ func BatchCreateResources(k8sClient client.Client, resources ...client.Object) e
 
 	// Wait for all creations to complete
 	var errors []error
-	for i := 0; i < len(resources); i++ {
+	for range resources {
 		if err := <-errChan; err != nil {
 			errors = append(errors, err)
 		}
@@ -876,10 +876,10 @@ func NewTestResourcePool(client client.Client, poolSize int) *TestResourcePool {
 // PrepopulatePool creates a pool of resources for quick test execution
 func (pool *TestResourcePool) PrepopulatePool(configs map[string]string) error {
 	// Create multiple configmaps and serving runtimes for parallel test use
-	for i := 0; i < pool.poolSize; i++ {
+	for idx := range pool.poolSize {
 		configMap := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%d", constants.InferenceServiceConfigMapName, i),
+				Name:      fmt.Sprintf("%s-%d", constants.InferenceServiceConfigMapName, idx),
 				Namespace: constants.KServeNamespace,
 			},
 			Data: configs,
@@ -887,7 +887,7 @@ func (pool *TestResourcePool) PrepopulatePool(configs map[string]string) error {
 
 		servingRuntime := &v1alpha1.ServingRuntime{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("tf-serving-raw-%d", i),
+				Name:      fmt.Sprintf("tf-serving-raw-%d", idx),
 				Namespace: "default",
 			},
 			Spec: v1alpha1.ServingRuntimeSpec{
@@ -923,7 +923,7 @@ func (pool *TestResourcePool) PrepopulatePool(configs map[string]string) error {
 	}
 
 	// Create all resources in parallel
-	var allResources []client.Object
+	allResources := make([]client.Object, 0, len(pool.configMaps)+len(pool.servingRuntimes))
 	for _, cm := range pool.configMaps {
 		allResources = append(allResources, cm)
 	}
@@ -945,7 +945,7 @@ func (pool *TestResourcePool) GetPooledResources(index int) (*corev1.ConfigMap, 
 
 // CleanupPool removes all pooled resources
 func (pool *TestResourcePool) CleanupPool() error {
-	var allResources []client.Object
+	allResources := make([]client.Object, 0, len(pool.configMaps)+len(pool.servingRuntimes))
 	for _, cm := range pool.configMaps {
 		allResources = append(allResources, cm)
 	}

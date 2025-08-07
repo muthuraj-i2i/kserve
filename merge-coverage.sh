@@ -12,10 +12,21 @@ fi
 OUTPUT=$1
 shift
 
-# Ensure the output file exists with a mode line
-if [ ! -f "$OUTPUT" ]; then
-  echo "mode: atomic" > "$OUTPUT"
-fi
+# Determine the mode from the first input file
+MODE="atomic"
+for f in "$@"; do
+  if [ -f "$f" ]; then
+    FIRST_LINE=$(head -n 1 "$f")
+    if [[ "$FIRST_LINE" == mode:* ]]; then
+      MODE=$(echo "$FIRST_LINE" | cut -d' ' -f2)
+      echo "Using coverage mode: $MODE (from $f)"
+      break
+    fi
+  fi
+done
+
+# Create output file with proper mode
+echo "mode: $MODE" > "$OUTPUT"
 
 # Append the content from all files (excluding mode line)
 for f in "$@"; do
