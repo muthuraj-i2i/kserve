@@ -196,19 +196,25 @@ test-qpext:
 
 # Run controller tests only
 test-controller: fmt vet manifests envtest
-	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m -tags=controller_tests ./pkg/controller/v1beta1/inferenceservice/... -coverprofile coverage-controller.out
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
+	go test --timeout 20m -tags=controller_tests \
+	-coverpkg=./pkg/... ./pkg/controller/v1beta1/inferenceservice ./cmd/... \
+	-coverprofile=coverage-controller.out
 
-# Run rawkube controller tests only
 test-rawkube: fmt vet manifests envtest
-	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m -tags=rawkube_tests ./pkg/controller/v1beta1/inferenceservice/... -coverprofile coverage-rawkube.out
-
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
+	go test --timeout 20m -tags=rawkube_tests \
+	-coverpkg=./pkg/... ./pkg/controller/v1beta1/inferenceservice ./cmd/... \
+	-coverprofile=coverage-rawkube.out
 # Run both controller and rawkube tests separately
 test-inferenceservice-separate: test-controller test-rawkube
 
 # Run all other tests excluding the inference service controller tests (which are now tagged)
 test-others: fmt vet manifests envtest test-qpext
-	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m $$(go list ./pkg/... | grep -v "controller/v1beta1/inferenceservice$$") ./cmd/... -coverprofile coverage-others.out -coverpkg ./pkg/... ./cmd...
-
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" \
+	go test --timeout 20m \
+	-coverpkg=./pkg/... $$(go list ./pkg/... | grep -v "controller/v1beta1/inferenceservice$$") ./cmd/... \
+	-coverprofile=coverage-others.out
 # Build manager binary
 manager: generate fmt vet go-lint
 	go build -o bin/manager ./cmd/manager
