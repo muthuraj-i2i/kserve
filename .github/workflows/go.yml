@@ -138,97 +138,14 @@ jobs:
                 pattern: coverage-*.out
                 merge-multiple: true
 
-            - name: Combine coverage reports
-              id: combine-coverage
-              run: |
-                # Make merge script executable
-                chmod +x ./merge-coverage.sh
-                
-                # List downloaded files for debugging
-                echo "Downloaded files:"
-                ls -la *.out || echo "No .out files found"
-                
-                # Check file sizes and validity
-                echo "Checking coverage file validity:"
-                for file in coverage-others.out coverage-controller.out coverage-rawkube.out; do
-                  if [ -f "$file" ]; then
-                    size=$(wc -l < "$file")
-                    echo "✓ $file found ($size lines)"
-                    # Show first few lines to verify format
-                    echo "  First line: $(head -n1 "$file")"
-                    if [ "$size" -gt 1 ]; then
-                      echo "  Sample data: $(head -n2 "$file" | tail -n1)"
-                    fi
-                  else
-                    echo "✗ $file not found"
-                  fi
-                done
-                
-                # Count valid coverage files
-                valid_files=()
-                [ -f coverage-others.out ] && [ $(wc -l < coverage-others.out) -gt 1 ] && valid_files+=(coverage-others.out)
-                [ -f coverage-controller.out ] && [ $(wc -l < coverage-controller.out) -gt 1 ] && valid_files+=(coverage-controller.out)
-                [ -f coverage-rawkube.out ] && [ $(wc -l < coverage-rawkube.out) -gt 1 ] && valid_files+=(coverage-rawkube.out)
-                
-                echo "Found ${#valid_files[@]} valid coverage files: ${valid_files[*]}"
-                
-                # Merge coverage files using the improved script
-                if [ ${#valid_files[@]} -gt 1 ]; then
-                  echo "Merging ${#valid_files[@]} coverage files..."
-                  ./merge-coverage.sh coverage.out "${valid_files[@]}"
-                  if [ $? -eq 0 ]; then
-                    echo "Successfully merged coverage files"
-                  else
-                    echo "Error: Coverage merge failed"
-                    exit 1
-                  fi
-                elif [ ${#valid_files[@]} -eq 1 ]; then
-                  echo "Using single coverage file: ${valid_files[0]}"
-                  cp "${valid_files[0]}" coverage.out
-                else
-                  echo "No valid coverage files found, creating minimal coverage file"
-                  echo "mode: set" > coverage.out
-                fi
-                
-                # Verify the merged file
-                if [ -f coverage.out ]; then
-                  lines=$(wc -l < coverage.out)
-                  echo "Final coverage.out contains $lines lines"
-                  if [ $lines -gt 1 ]; then
-                    echo "Coverage file header: $(head -n1 coverage.out)"
-                    echo "Sample coverage data: $(head -n3 coverage.out | tail -n1)"
-                    echo "Coverage file appears valid"
-                  else
-                    echo "Warning: Coverage file contains only header"
-                  fi
-                else
-                  echo "Error: Failed to create coverage.out"
-                  exit 1
-                fi
-
             - name: Extract coverage percentage
               id: current-coverage
               run: |
-                if [ -f coverage.out ] && [ $(wc -l < coverage.out) -gt 1 ]; then
-                  echo "Calculating coverage from coverage.out..."
-                  # Use go tool cover to get accurate coverage percentage
-                  COVERAGE_OUTPUT=$(go tool cover -func=coverage.out 2>/dev/null || echo "")
-                  if [ -n "$COVERAGE_OUTPUT" ]; then
-                    COVERAGE=$(echo "$COVERAGE_OUTPUT" | grep "total:" | awk '{print $3}' | sed 's/%//')
-                    if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "" ]; then
-                      echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
-                      echo "Extracted coverage: $COVERAGE%"
-                    else
-                      echo "coverage=0" >> $GITHUB_OUTPUT
-                      echo "Warning: Could not extract coverage percentage from go tool cover output"
-                    fi
-                  else
-                    echo "coverage=0" >> $GITHUB_OUTPUT
-                    echo "Warning: go tool cover failed to process coverage.out"
-                  fi
+                if [ -f coverage.out ]; then
+                  COVERAGE=$(go tool cover -func=coverage.out | grep total: | awk '{print $3}' | sed 's/%//')
+                  echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
                 else
                   echo "coverage=0" >> $GITHUB_OUTPUT
-                  echo "Warning: coverage.out not found or empty"
                 fi
             
             - name: download artifact (master.breakdown)
@@ -252,42 +169,23 @@ jobs:
             - name: Extract master coverage percentage
               id: master-coverage
               run: |
-                if [ -f master-coverage.out ] && [ $(wc -l < master-coverage.out) -gt 1 ]; then
-                  echo "Calculating master coverage from master-coverage.out..."
-                  COVERAGE_OUTPUT=$(go tool cover -func=master-coverage.out 2>/dev/null || echo "")
-                  if [ -n "$COVERAGE_OUTPUT" ]; then
-                    MASTER_COVERAGE=$(echo "$COVERAGE_OUTPUT" | grep "total:" | awk '{print $3}' | sed 's/%//')
-                    if [ -n "$MASTER_COVERAGE" ] && [ "$MASTER_COVERAGE" != "" ]; then
-                      echo "coverage=$MASTER_COVERAGE" >> $GITHUB_OUTPUT
-                      echo "Extracted master coverage: $MASTER_COVERAGE%"
-                    else
-                      echo "coverage=0" >> $GITHUB_OUTPUT
-                      echo "Warning: Could not extract master coverage percentage"
-                    fi
-                  else
-                    echo "coverage=0" >> $GITHUB_OUTPUT
-                    echo "Warning: go tool cover failed to process master-coverage.out"
-                  fi
+                if [ -f master-coverage.out ]; then
+                  MASTER_COVERAGE=$(go tool cover -func=master-coverage.out | grep total: | awk '{print $3}' | sed 's/%//')
+                  echo "coverage=$MASTER_COVERAGE" >> $GITHUB_OUTPUT
                 else
                   echo "coverage=0" >> $GITHUB_OUTPUT
-                  echo "Warning: master-coverage.out not found or empty"
                 fi
 
             - name: Generate full coverage breakdown
               id: full_coverage_report
               run: |
-                if [ -f coverage.out ] && [ $(wc -l < coverage.out) -gt 1 ]; then
-                  echo "Generating coverage breakdown..."
-                  REPORT_CONTENT=$(go tool cover -func=coverage.out 2>/dev/null || echo "Error: Failed to generate coverage report")
-                  if [ "$REPORT_CONTENT" != "Error: Failed to generate coverage report" ] && [ -n "$REPORT_CONTENT" ]; then
-                    echo "report<<EOF" >> $GITHUB_OUTPUT
-                    echo "$REPORT_CONTENT" >> $GITHUB_OUTPUT
-                    echo "EOF" >> $GITHUB_OUTPUT
-                  else
-                    echo "report=Error: Unable to generate coverage breakdown from coverage.out" >> $GITHUB_OUTPUT
-                  fi
+                if [ -f coverage.out ]; then
+                  REPORT_CONTENT=$(go tool cover -func=coverage.out) # This command outputs function-level coverage [5]
+                  echo "report<<EOF" >> $GITHUB_OUTPUT # Start HERE-doc for multi-line output [3]
+                  echo "$REPORT_CONTENT" >> $GITHUB_OUTPUT
+                  echo "EOF" >> $GITHUB_OUTPUT # End HERE-doc
                 else
-                  echo "report=No coverage report found or coverage file is empty." >> $GITHUB_OUTPUT
+                  echo "report=No coverage report found." >> $GITHUB_OUTPUT
                 fi
 
             - name: check test coverage
