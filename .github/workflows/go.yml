@@ -159,8 +159,9 @@ jobs:
             - name: Merge coverage files
               id: merge-coverage
               run: |
-                # Make merge script executable
-                chmod +x ./merge-coverage.sh
+                # Install gocovmerge tool
+                echo "Installing gocovmerge..."
+                go install github.com/wadey/gocovmerge@latest
                 
                 # List downloaded files for debugging
                 echo "Downloaded coverage files:"
@@ -182,14 +183,14 @@ jobs:
                 
                 echo "Found ${#valid_files[@]} valid coverage files: ${valid_files[*]}"
                 
-                # Merge coverage files using the merge script
+                # Merge coverage files using gocovmerge
                 if [ ${#valid_files[@]} -gt 1 ]; then
-                  echo "Merging ${#valid_files[@]} coverage files into coverage.out..."
-                  ./merge-coverage.sh coverage.out "${valid_files[@]}"
-                  if [ $? -eq 0 ]; then
-                    echo "Successfully merged coverage files"
+                  echo "Merging ${#valid_files[@]} coverage files using gocovmerge..."
+                  gocovmerge "${valid_files[@]}" > coverage.out
+                  if [ $? -eq 0 ] && [ -f coverage.out ]; then
+                    echo "Successfully merged coverage files using gocovmerge"
                   else
-                    echo "Error: Coverage merge failed"
+                    echo "Error: gocovmerge failed"
                     exit 1
                   fi
                 elif [ ${#valid_files[@]} -eq 1 ]; then
@@ -208,6 +209,11 @@ jobs:
                     echo "Coverage file header: $(head -n1 coverage.out)"
                     echo "Sample coverage data: $(head -n3 coverage.out | tail -n1)"
                     echo "Merged coverage file is ready for analysis"
+                    
+                    # Get consolidated percentage
+                    echo "Getting consolidated coverage percentage..."
+                    MERGED_COVERAGE=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}' | sed 's/%//')
+                    echo "Merged coverage percentage: $MERGED_COVERAGE%"
                   else
                     echo "Warning: Merged coverage file contains only header"
                   fi
