@@ -43,7 +43,6 @@ jobs:
                 chmod +x $GOPATH/bin/yq
                 make test-others
                 # Copy others coverage to coverage.out for processing
-                cp coverage-others.out coverage.out
                 ./coverage.sh
                 echo ::set-output name=coverage::$(./coverage.sh | tr -s '\t' | cut -d$'\t' -f 3)
             
