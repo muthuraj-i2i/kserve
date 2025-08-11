@@ -159,9 +159,17 @@ jobs:
             - name: Merge coverage files
               id: merge-coverage
               run: |
-                # Install gocovmerge tool
+                # Set up Go environment and install gocovmerge tool
+                echo "Setting up Go environment..."
+                export GOPATH=/home/runner/go
+                export PATH=$PATH:/home/runner/go/bin
+                
                 echo "Installing gocovmerge..."
                 go install github.com/wadey/gocovmerge@latest
+                
+                # Verify gocovmerge installation
+                which gocovmerge || echo "gocovmerge not found in PATH, checking GOPATH/bin..."
+                ls -la $GOPATH/bin/gocovmerge || echo "gocovmerge binary not found"
                 
                 # List downloaded files for debugging
                 echo "Downloaded coverage files:"
@@ -186,7 +194,7 @@ jobs:
                 # Merge coverage files using gocovmerge
                 if [ ${#valid_files[@]} -gt 1 ]; then
                   echo "Merging ${#valid_files[@]} coverage files using gocovmerge..."
-                  gocovmerge "${valid_files[@]}" > coverage.out
+                  $GOPATH/bin/gocovmerge "${valid_files[@]}" > coverage.out
                   if [ $? -eq 0 ] && [ -f coverage.out ]; then
                     echo "Successfully merged coverage files using gocovmerge"
                   else
