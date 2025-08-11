@@ -138,6 +138,66 @@ jobs:
                 pattern: coverage-*.out
                 merge-multiple: true
 
+            - name: Merge coverage files
+              id: merge-coverage
+              run: |
+                # Make merge script executable
+                chmod +x ./merge-coverage.sh
+                
+                # List downloaded files for debugging
+                echo "Downloaded coverage files:"
+                ls -la coverage-*.out || echo "No coverage files found"
+                
+                # Check which coverage files exist and are valid
+                valid_files=()
+                for file in coverage-others.out coverage-controller.out coverage-rawkube.out; do
+                  if [ -f "$file" ] && [ $(wc -l < "$file") -gt 1 ]; then
+                    size=$(wc -l < "$file")
+                    echo "✓ $file found and valid ($size lines)"
+                    valid_files+=("$file")
+                  elif [ -f "$file" ]; then
+                    echo "⚠ $file found but empty/invalid ($(wc -l < "$file") lines)"
+                  else
+                    echo "✗ $file not found"
+                  fi
+                done
+                
+                echo "Found ${#valid_files[@]} valid coverage files: ${valid_files[*]}"
+                
+                # Merge coverage files using the merge script
+                if [ ${#valid_files[@]} -gt 1 ]; then
+                  echo "Merging ${#valid_files[@]} coverage files into coverage.out..."
+                  ./merge-coverage.sh coverage.out "${valid_files[@]}"
+                  if [ $? -eq 0 ]; then
+                    echo "Successfully merged coverage files"
+                  else
+                    echo "Error: Coverage merge failed"
+                    exit 1
+                  fi
+                elif [ ${#valid_files[@]} -eq 1 ]; then
+                  echo "Only one valid coverage file found, copying to coverage.out..."
+                  cp "${valid_files[0]}" coverage.out
+                else
+                  echo "No valid coverage files found, creating minimal coverage.out..."
+                  echo "mode: set" > coverage.out
+                fi
+                
+                # Verify the final merged file
+                if [ -f coverage.out ]; then
+                  lines=$(wc -l < coverage.out)
+                  echo "Final coverage.out contains $lines lines"
+                  if [ $lines -gt 1 ]; then
+                    echo "Coverage file header: $(head -n1 coverage.out)"
+                    echo "Sample coverage data: $(head -n3 coverage.out | tail -n1)"
+                    echo "Merged coverage file is ready for analysis"
+                  else
+                    echo "Warning: Merged coverage file contains only header"
+                  fi
+                else
+                  echo "Error: Failed to create coverage.out"
+                  exit 1
+                fi
+
             - name: Extract coverage percentage
               id: current-coverage
               run: |
