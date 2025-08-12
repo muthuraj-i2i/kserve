@@ -160,85 +160,24 @@ jobs:
             - name: Merge coverage files
               id: merge-coverage
               run: |
-                # Set up Go environment and install gocovmerge tool
-                echo "Setting up Go environment..."
-                export GOPATH=/home/runner/go
-                export PATH=$PATH:/home/runner/go/bin
-                
-                echo "Installing gocovmerge..."
-                go install github.com/wadey/gocovmerge@latest
-                
-                # Verify gocovmerge installation
-                which gocovmerge || echo "gocovmerge not found in PATH, checking GOPATH/bin..."
-                ls -la $GOPATH/bin/gocovmerge || echo "gocovmerge binary not found"
-                
-                # List downloaded files for debugging
-                echo "Downloaded coverage files:"
-                ls -la coverage-*.out || echo "No coverage files found"
-                
-                # Check which coverage files exist and are valid
-                valid_files=()
-                for file in coverage-others.out coverage-controller.out coverage-rawkube.out; do
-                  if [ -f "$file" ] && [ $(wc -l < "$file") -gt 1 ]; then
-                    size=$(wc -l < "$file")
-                    echo "✓ $file found and valid ($size lines)"
-                    valid_files+=("$file")
-                  elif [ -f "$file" ]; then
-                    echo "⚠ $file found but empty/invalid ($(wc -l < "$file") lines)"
-                  else
-                    echo "✗ $file not found"
+                # Ensure all modes match
+                mode=$(head -n 1 coverage-others.out | cut -d' ' -f2)
+                for f in coverage-*.out; do
+                  if [ "$(head -n 1 $f | cut -d' ' -f2)" != "$mode" ]; then
+                    echo "Error: coverage mode mismatch in $f"
+                    exit 1
                   fi
                 done
-                
-                echo "Found ${#valid_files[@]} valid coverage files: ${valid_files[*]}"
-                
-                # Merge coverage files using gocovmerge sequentially
-                if [ ${#valid_files[@]} -gt 1 ]; then
-                  echo "Merging ${#valid_files[@]} coverage files sequentially using gocovmerge..."
-                  
-                  # Start with the first file
-                  cp "${valid_files[0]}" merged.out
-                  echo "Starting with ${valid_files[0]}"
-                  
-                  # Merge remaining files one by one
-                  for ((i=1; i<${#valid_files[@]}; i++)); do
-                    echo "Merging merged.out with ${valid_files[i]}..."
-                    $GOPATH/bin/gocovmerge merged.out "${valid_files[i]}" > merged_temp.out
-                    if [ $? -eq 0 ] && [ -f merged_temp.out ]; then
-                      mv merged_temp.out merged.out
-                      echo "Successfully merged with ${valid_files[i]}"
-                    else
-                      echo "Error: gocovmerge failed when merging with ${valid_files[i]}"
-                      exit 1
-                    fi
-                  done
-                  
-                  # Final result
-                  mv merged.out coverage.out
-                  echo "Sequential merge completed successfully"
-                elif [ ${#valid_files[@]} -eq 1 ]; then
-                  echo "Only one valid coverage file found, copying to coverage.out..."
-                  cp "${valid_files[0]}" coverage.out
-                else
-                  echo "No valid coverage files found, creating minimal coverage.out..."
-                  echo "mode: set" > coverage.out
-                fi
-                
-                # Print the merged coverage.out file content
-                echo "=== Merged coverage.out content ==="
-                if [ -f coverage.out ]; then
-                  echo "Coverage file size: $(wc -l < coverage.out) lines"
-                  echo "First 50 lines:"
-                  head -50 coverage.out
-                  echo ""
-                  echo "Last 50 lines:"
-                  tail -50 coverage.out
-                else
-                  echo "Error: coverage.out file not found after merge"
-                fi
-                echo "=== End of coverage.out content ==="
 
-            
+                # Install gocovmerge
+                go install github.com/wadey/gocovmerge@latest
+
+                # Merge all valid files in one go (avoids losing overlapping coverage)
+                gocovmerge coverage-others.out coverage-controller.out coverage-rawkube.out > coverage.out
+
+                # Remove duplicate mode lines just in case
+                grep -v "^mode:" coverage.out > tmp && echo "mode: $mode" > coverage.out && cat tmp >> coverage.out && rm tmp
+                            
             - name: Extract coverage percentage
               id: current-coverage
               run: |
