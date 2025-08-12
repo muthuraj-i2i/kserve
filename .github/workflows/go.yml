@@ -74,6 +74,7 @@ jobs:
             - name: Get dependencies
               run: |
                 go get -v -t -d ./...
+                go install github.com/wadey/gocovmerge@latest
 
             - name: Test Controller
               id: test
@@ -116,6 +117,7 @@ jobs:
             - name: Get dependencies
               run: |
                 go get -v -t -d ./...
+                go install github.com/wadey/gocovmerge@latest
 
             - name: Test Rawkube
               id: test
@@ -126,6 +128,7 @@ jobs:
                 chmod +x $GOPATH/bin/yq
                 make test-rawkube
                 # Copy rawkube coverage to coverage.out for processing
+                gocovmerge coverage-rawkube.out coverage.out > coverage_all.out
                 cp coverage-rawkube.out coverage.out
                 ./coverage.sh
                 echo ::set-output name=coverage::$(./coverage.sh | tr -s '\t' | cut -d$'\t' -f 3)
