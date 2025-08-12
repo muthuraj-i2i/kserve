@@ -223,7 +223,22 @@ jobs:
                   echo "No valid coverage files found, creating minimal coverage.out..."
                   echo "mode: set" > coverage.out
                 fi
+                
+                # Print the merged coverage.out file content
+                echo "=== Merged coverage.out content ==="
+                if [ -f coverage.out ]; then
+                  echo "Coverage file size: $(wc -l < coverage.out) lines"
+                  echo "First 50 lines:"
+                  head -50 coverage.out
+                  echo ""
+                  echo "Last 50 lines:"
+                  tail -50 coverage.out
+                else
+                  echo "Error: coverage.out file not found after merge"
+                fi
+                echo "=== End of coverage.out content ==="
 
+            
             - name: Extract coverage percentage
               id: current-coverage
               run: |
