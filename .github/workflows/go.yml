@@ -53,8 +53,8 @@ jobs:
             - name: upload cover profile artifact
               uses: actions/upload-artifact@v4
               with:
-                name: coverage.out
-                path: coverage.out
+                name: coverage-others.out
+                path: coverage-others.out
                 if-no-files-found: error
 
     test-controller:
