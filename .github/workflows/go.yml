@@ -160,6 +160,18 @@ jobs:
             - name: Merge coverage files
               id: merge-coverage
               run: |
+                # Set up Go environment and install gocovmerge tool
+                echo "Setting up Go environment..."
+                export GOPATH=/home/runner/go
+                export PATH=$PATH:/home/runner/go/bin
+                
+                echo "Installing gocovmerge..."
+                go install github.com/wadey/gocovmerge@latest
+
+                # Verify gocovmerge installation
+                which gocovmerge || echo "gocovmerge not found in PATH, checking GOPATH/bin..."
+                ls -la $GOPATH/bin/gocovmerge || echo "gocovmerge binary not found"
+
                 # Ensure all modes match
                 mode=$(head -n 1 coverage-others.out | cut -d' ' -f2)
                 for f in coverage-*.out; do
@@ -169,11 +181,8 @@ jobs:
                   fi
                 done
 
-                # Install gocovmerge
-                go install github.com/wadey/gocovmerge@latest
-
                 # Merge all valid files in one go (avoids losing overlapping coverage)
-                gocovmerge coverage-others.out coverage-controller.out coverage-rawkube.out > coverage.out
+                $GOPATH/bin/gocovmerge coverage-others.out coverage-controller.out coverage-rawkube.out > coverage.out
 
                 # Remove duplicate mode lines just in case
                 grep -v "^mode:" coverage.out > tmp && echo "mode: $mode" > coverage.out && cat tmp >> coverage.out && rm tmp
