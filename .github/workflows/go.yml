@@ -128,7 +128,6 @@ jobs:
                 chmod +x $GOPATH/bin/yq
                 make test-rawkube
                 # Copy rawkube coverage to coverage.out for processing
-                gocovmerge coverage-rawkube.out coverage.out > coverage_all.out
                 cp coverage-rawkube.out coverage.out
                 ./coverage.sh
                 echo ::set-output name=coverage::$(./coverage.sh | tr -s '\t' | cut -d$'\t' -f 3)
@@ -331,7 +330,7 @@ jobs:
     #             if-no-files-found: error
 
     check-coverage:
-        needs: test-others
+        needs: [test-others, test-controller, test-rawkube]
         runs-on: ubuntu-latest
         name: Check Coverage
         steps:
