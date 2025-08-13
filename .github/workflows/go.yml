@@ -1,23 +1,57 @@
 name: Go Test
-
 on:
     push:
         branches: [master, release*]
     pull_request:
         branches: []
     workflow_dispatch:
-
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: true
-
 permissions:
     contents: write
     pull-requests: write
 
 jobs:
-    test:
-        name: Test
+    test-others:
+        name: Test Others
+        runs-on: ubuntu-latest
+        steps:
+
+            - name: Check out code into the Go module directory
+              uses: actions/checkout@v4
+            - name: Set up Go 1.x
+              uses: actions/setup-go@v5
+              with:
+               go-version-file: go.mod
+              id: go
+            - name: Get dependencies
+              run: |
+                go get -v -t -d ./...
+            - name: Test Others
+              id: test
+              run: |
+                export GOPATH=/home/runner/go
+                export PATH=$PATH:/usr/local/kubebuilder/bin:/home/runner/go/bin
+                wget -O $GOPATH/bin/yq https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64
+                chmod +x $GOPATH/bin/yq
+                make test-others
+                # Copy others coverage to coverage.out for processing
+                ./coverage.sh
+                echo ::set-output name=coverage::$(./coverage.sh | tr -s '\t' | cut -d$'\t' -f 3)
+            
+            - name: Print coverage
+              run: |
+                echo "Coverage output is ${{ steps.test.outputs.coverage }}"
+            - name: upload cover profile artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: coverage-others.out
+                path: coverage-others.out
+                if-no-files-found: error
+
+    test-controller:
+        name: Test Controller
         runs-on: ubuntu-latest
         steps:
 
@@ -33,43 +67,168 @@ jobs:
             - name: Get dependencies
               run: |
                 go get -v -t -d ./...
-
-            - name: Test
+                go install github.com/wadey/gocovmerge@latest
+            - name: Test Controller
               id: test
               run: |
                 export GOPATH=/home/runner/go
                 export PATH=$PATH:/usr/local/kubebuilder/bin:/home/runner/go/bin
                 wget -O $GOPATH/bin/yq https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64
                 chmod +x $GOPATH/bin/yq
-                make test
+                make test-controller
+                # Copy controller coverage to coverage.out for processing
+                cp coverage-controller.out coverage.out
                 ./coverage.sh
                 echo ::set-output name=coverage::$(./coverage.sh | tr -s '\t' | cut -d$'\t' -f 3)
             
             - name: Print coverage
               run: |
                 echo "Coverage output is ${{ steps.test.outputs.coverage }}"
-
+            
             - name: upload cover profile artifact
               uses: actions/upload-artifact@v4
               with:
-                name: coverage.out
-                path: coverage.out
+                name: coverage-controller.out
+                path: coverage-controller.out
+                if-no-files-found: error
+
+    test-rawkube:
+        name: Test Rawkube
+        runs-on: ubuntu-latest
+        steps:
+
+            - name: Check out code into the Go module directory
+              uses: actions/checkout@v4
+
+            - name: Set up Go 1.x
+              uses: actions/setup-go@v5
+              with:
+               go-version-file: go.mod
+              id: go
+
+            - name: Get dependencies
+              run: |
+                go get -v -t -d ./...
+                go install github.com/wadey/gocovmerge@latest
+            - name: Test Rawkube
+              id: test
+              run: |
+                export GOPATH=/home/runner/go
+                export PATH=$PATH:/usr/local/kubebuilder/bin:/home/runner/go/bin
+                wget -O $GOPATH/bin/yq https://github.com/mikefarah/yq/releases/download/v4.28.1/yq_linux_amd64
+                chmod +x $GOPATH/bin/yq
+                make test-rawkube
+                # Copy rawkube coverage to coverage.out for processing
+                cp coverage-rawkube.out coverage.out
+                ./coverage.sh
+                echo ::set-output name=coverage::$(./coverage.sh | tr -s '\t' | cut -d$'\t' -f 3)
+            
+            - name: Print coverage
+              run: |
+                echo "Coverage output is ${{ steps.test.outputs.coverage }}"
+            
+            - name: upload cover profile artifact
+              uses: actions/upload-artifact@v4
+              with:
+                name: coverage-rawkube.out
+                path: coverage-rawkube.out
                 if-no-files-found: error
 
     check-coverage:
-        needs: test
+        needs: [test-others, test-controller, test-rawkube]
         runs-on: ubuntu-latest
         name: Check Coverage
         steps:
             - name: checkout
               uses: actions/checkout@v4
 
-            - name: Download cover profile artifact
-              id: download-coverage
+            - name: Download coverage artifacts
               uses: actions/download-artifact@v4
               with:
-                name: coverage.out
+                pattern: coverage-*.out
+                merge-multiple: true
 
+            - name: Merge coverage files
+              id: merge-coverage
+              run: |
+                # Set up Go environment and install gocovmerge tool
+                echo "Setting up Go environment..."
+                export GOPATH=/home/runner/go
+                export PATH=$PATH:/home/runner/go/bin
+                
+                echo "Installing gocovmerge..."
+                go install github.com/wadey/gocovmerge@latest
+                
+                # Verify gocovmerge installation
+                which gocovmerge || echo "gocovmerge not found in PATH, checking GOPATH/bin..."
+                ls -la $GOPATH/bin/gocovmerge || echo "gocovmerge binary not found"
+                
+                # List downloaded files for debugging
+                echo "Downloaded coverage files:"
+                ls -la coverage-*.out || echo "No coverage files found"
+                
+                # Check which coverage files exist and are valid
+                valid_files=()
+                for file in coverage-others.out coverage-controller.out coverage-rawkube.out; do
+                  if [ -f "$file" ] && [ $(wc -l < "$file") -gt 1 ]; then
+                    size=$(wc -l < "$file")
+                    echo "✓ $file found and valid ($size lines)"
+                    valid_files+=("$file")
+                  elif [ -f "$file" ]; then
+                    echo "⚠ $file found but empty/invalid ($(wc -l < "$file") lines)"
+                  else
+                    echo "✗ $file not found"
+                  fi
+                done
+                
+                echo "Found ${#valid_files[@]} valid coverage files: ${valid_files[*]}"
+                
+                # Merge coverage files using gocovmerge sequentially
+                if [ ${#valid_files[@]} -gt 1 ]; then
+                  echo "Merging ${#valid_files[@]} coverage files sequentially using gocovmerge..."
+                  
+                  # Start with the first file
+                  cp "${valid_files[0]}" merged.out
+                  echo "Starting with ${valid_files[0]}"
+                  
+                  # Merge remaining files one by one
+                  for ((i=1; i<${#valid_files[@]}; i++)); do
+                    echo "Merging merged.out with ${valid_files[i]}..."
+                    $GOPATH/bin/gocovmerge merged.out "${valid_files[i]}" > merged_temp.out
+                    if [ $? -eq 0 ] && [ -f merged_temp.out ]; then
+                      mv merged_temp.out merged.out
+                      echo "Successfully merged with ${valid_files[i]}"
+                    else
+                      echo "Error: gocovmerge failed when merging with ${valid_files[i]}"
+                      exit 1
+                    fi
+                  done
+                  
+                  # Final result
+                  mv merged.out coverage.out
+                  echo "Sequential merge completed successfully"
+                elif [ ${#valid_files[@]} -eq 1 ]; then
+                  echo "Only one valid coverage file found, copying to coverage.out..."
+                  cp "${valid_files[0]}" coverage.out
+                else
+                  echo "No valid coverage files found, creating minimal coverage.out..."
+                  echo "mode: set" > coverage.out
+                fi
+                
+                # Print the merged coverage.out file content
+                echo "=== Merged coverage.out content ==="
+                if [ -f coverage.out ]; then
+                  echo "Coverage file size: $(wc -l < coverage.out) lines"
+                  echo "First 50 lines:"
+                  head -50 coverage.out
+                  echo ""
+                  echo "Last 50 lines:"
+                  tail -50 coverage.out
+                else
+                  echo "Error: coverage.out file not found after merge"
+                fi
+                echo "=== End of coverage.out content ==="
+            
             - name: Extract coverage percentage
               id: current-coverage
               run: |
@@ -88,7 +247,6 @@ jobs:
                 workflow_conclusion: success
                 name: master.breakdown
                 if_no_artifact_found: warn
-
             - name: download artifact (master-coverage.out)
               id: download-master-coverage
               uses: dawidd6/action-download-artifact@v9
@@ -97,7 +255,6 @@ jobs:
                 workflow_conclusion: success
                 name: master-coverage.out
                 if_no_artifact_found: warn
-
             - name: Extract master coverage percentage
               id: master-coverage
               run: |
@@ -107,7 +264,6 @@ jobs:
                 else
                   echo "coverage=0" >> $GITHUB_OUTPUT
                 fi
-
             - name: Generate full coverage breakdown
               id: full_coverage_report
               run: |
@@ -119,7 +275,6 @@ jobs:
                 else
                   echo "report=No coverage report found." >> $GITHUB_OUTPUT
                 fi
-
             - name: check test coverage
               id: coverage
               uses: vladopajic/go-test-coverage@v2
@@ -140,11 +295,9 @@ jobs:
             - name: Previous coverage
               run: |
                 echo "Previous Coverage ${{ steps.master-coverage.outputs.coverage }}"
-
             - name: Current coverage
               run: |
                 echo "Current Coverage ${{ steps.current-coverage.outputs.coverage }}"
-
             - name: post coverage report
               # this has evalated permission to post back the coverage, only restricted to this step.
               if: github.event_name == 'pull_request_target'
@@ -155,7 +308,6 @@ jobs:
                 pr-number: ${{ github.event.pull_request.number }}
                 message: |
                   ## 📊 Go Test Coverage Report
-
                   ${{ 
                     steps.current-coverage.outputs.coverage > steps.master-coverage.outputs.coverage 
                     && '✅ **Overall code coverage increased.**' 
@@ -163,24 +315,18 @@ jobs:
                     && '❌ **Overall code coverage decreased.**' 
                     || 'ℹ️ **Overall code coverage unchanged.**' 
                   }}
-
                   **🔍 Coverage Summary**
                   - **Pull Request Coverage:** `${{ steps.current-coverage.outputs.coverage }}%`
                   - **Main Branch Coverage:** `${{ steps.master-coverage.outputs.coverage }}%`
-
                   <details>
                   <summary>📄 Click to expand full coverage breakdown</summary>
-
                   ```
                   ${{ steps.full_coverage_report.outputs.report }}
                   ```
-
                   </details>
-
             - name: Rename and upload master coverage
               if: github.ref_name == 'master'
               run: mv coverage.out master-coverage.out
-
             - name: Upload master coverage artifact
               if: github.ref_name == 'master'
               uses: actions/upload-artifact@v4
