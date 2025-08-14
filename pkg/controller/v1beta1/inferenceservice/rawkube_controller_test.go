@@ -50,27 +50,19 @@ import (
 	"github.com/kserve/kserve/pkg/apis/serving/v1beta1"
 	"github.com/kserve/kserve/pkg/constants"
 	"github.com/kserve/kserve/pkg/controller/v1beta1/inferenceservice/components"
+	"github.com/kserve/kserve/pkg/controller/v1beta1/inferenceservice/testutils"
 	"github.com/kserve/kserve/pkg/utils"
 )
 
 var _ = Describe("v1beta1 inference service controller", func() {
 	// Define utility constants for object names and testing timeouts/durations and intervals.
 	const (
-		consistentlyTimeout = time.Second * 5
-		timeout             = time.Second * 60
-		interval            = time.Millisecond * 250
+		consistentlyTimeout = testutils.ConsistentlyTimeout
+		timeout             = testutils.FastTimeout
+		interval            = testutils.PollInterval
 		domain              = "example.com"
 	)
-	defaultResource := corev1.ResourceRequirements{
-		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("1"),
-			corev1.ResourceMemory: resource.MustParse("2Gi"),
-		},
-		Requests: corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("1"),
-			corev1.ResourceMemory: resource.MustParse("2Gi"),
-		},
-	}
+	defaultResource := testutils.DefaultResource
 	kserveGateway := types.NamespacedName{Name: "kserve-ingress-gateway", Namespace: "kserve"}
 
 	configs := map[string]string{
@@ -102,101 +94,26 @@ var _ = Describe("v1beta1 inference service controller", func() {
 	Context("When creating inference service with raw kube predictor", func() {
 		It("Should have httproute/service/deployment/httproute created", func() {
 			By("By creating a new InferenceService")
-			// Create configmap
-			configMap := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      constants.InferenceServiceConfigMapName,
-					Namespace: constants.KServeNamespace,
-				},
-				Data: configs,
-			}
+			// Create configmap using helper
+			configMap := testutils.CreateDefaultConfigMap(k8sClient, configs)
 			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
 			defer k8sClient.Delete(context.TODO(), configMap)
-			// Create ServingRuntime
-			servingRuntime := &v1alpha1.ServingRuntime{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tf-serving-raw",
-					Namespace: "default",
-				},
-				Spec: v1alpha1.ServingRuntimeSpec{
-					SupportedModelFormats: []v1alpha1.SupportedModelFormat{
-						{
-							Name:       "tensorflow",
-							Version:    proto.String("1"),
-							AutoSelect: proto.Bool(true),
-						},
-					},
-					ServingRuntimePodSpec: v1alpha1.ServingRuntimePodSpec{
-						Containers: []corev1.Container{
-							{
-								Name:    "kserve-container",
-								Image:   "tensorflow/serving:1.14.0",
-								Command: []string{"/usr/bin/tensorflow_model_server"},
-								Args: []string{
-									"--port=9000",
-									"--rest_api_port=8080",
-									"--model_base_path=/mnt/models",
-									"--rest_api_timeout_in_ms=60000",
-								},
-								Resources: defaultResource,
-							},
-						},
-					},
-					Disabled: proto.Bool(false),
-				},
-			}
+
+			// Create ServingRuntime using helper
+			servingRuntime := testutils.CreateDefaultServingRuntime("tf-serving-raw", "default")
 			k8sClient.Create(context.TODO(), servingRuntime)
 			defer k8sClient.Delete(context.TODO(), servingRuntime)
+
 			serviceName := "raw-foo"
 			expectedRequest := reconcile.Request{NamespacedName: types.NamespacedName{Name: serviceName, Namespace: "default"}}
 			serviceKey := expectedRequest.NamespacedName
-			storageUri := "s3://test/mnist/export"
-			qty := resource.MustParse("10Gi")
 			ctx := context.Background()
-			isvc := &v1beta1.InferenceService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      serviceKey.Name,
-					Namespace: serviceKey.Namespace,
-					Annotations: map[string]string{
-						constants.DeploymentMode:  string(constants.RawDeployment),
-						constants.AutoscalerClass: string(constants.AutoscalerClassHPA),
-					},
-				},
-				Spec: v1beta1.InferenceServiceSpec{
-					Predictor: v1beta1.PredictorSpec{
-						ComponentExtensionSpec: v1beta1.ComponentExtensionSpec{
-							MinReplicas:    ptr.To(int32(1)),
-							MaxReplicas:    3,
-							TimeoutSeconds: ptr.To(int64(30)),
-							AutoScaling: &v1beta1.AutoScalingSpec{
-								Metrics: []v1beta1.MetricsSpec{
-									{
-										Type: v1beta1.ResourceMetricSourceType,
-										Resource: &v1beta1.ResourceMetricSource{
-											Name: v1beta1.ResourceMetricMemory,
-											Target: v1beta1.MetricTarget{
-												Type:         v1beta1.AverageValueMetricType,
-												AverageValue: &qty,
-											},
-										},
-									},
-								},
-							},
-						},
-						Tensorflow: &v1beta1.TFServingSpec{
-							PredictorExtensionSpec: v1beta1.PredictorExtensionSpec{
-								StorageURI:     &storageUri,
-								RuntimeVersion: proto.String("1.14.0"),
-								Container: corev1.Container{
-									Name:      constants.InferenceServiceContainerName,
-									Resources: defaultResource,
-								},
-							},
-						},
-					},
-				},
-			}
-			isvc.DefaultInferenceService(nil, nil, &v1beta1.SecurityConfig{AutoMountServiceAccountToken: false}, nil)
+
+			// Create InferenceService using helper
+			isvc := testutils.CreateDefaultInferenceService(serviceKey.Name, serviceKey.Namespace, map[string]string{
+				constants.DeploymentMode:  string(constants.RawDeployment),
+				constants.AutoscalerClass: string(constants.AutoscalerClassHPA),
+			})
 			Expect(k8sClient.Create(ctx, isvc)).Should(Succeed())
 			defer k8sClient.Delete(ctx, isvc)
 
@@ -208,10 +125,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			actualDeployment := &appsv1.Deployment{}
-			predictorDeploymentKey := types.NamespacedName{
-				Name:      constants.PredictorServiceName(serviceKey.Name),
-				Namespace: serviceKey.Namespace,
-			}
+			predictorDeploymentKey := testutils.GetPredictorKey(serviceKey.Name, serviceKey.Namespace)
 			Eventually(func() error { return k8sClient.Get(context.TODO(), predictorDeploymentKey, actualDeployment) }, timeout).
 				Should(Succeed())
 			var replicas int32 = 1
@@ -615,7 +529,7 @@ var _ = Describe("v1beta1 inference service controller", func() {
 								Name: corev1.ResourceMemory,
 								Target: autoscalingv2.MetricTarget{
 									Type:         autoscalingv2.AverageValueMetricType,
-									AverageValue: &qty,
+									AverageValue: func() *resource.Quantity { qty := resource.MustParse("10Gi"); return &qty }(),
 								},
 							},
 						},
@@ -656,52 +570,11 @@ var _ = Describe("v1beta1 inference service controller", func() {
 
 		It("Should have httproute/service/deployment/hpa created with DeploymentStrategy", func() {
 			By("By creating a new InferenceService with DeploymentStrategy in PredictorSpec")
-			// Create configmap
-			configMap := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      constants.InferenceServiceConfigMapName,
-					Namespace: constants.KServeNamespace,
-				},
-				Data: configs,
-			}
-			Expect(k8sClient.Create(context.TODO(), configMap)).NotTo(HaveOccurred())
-			defer k8sClient.Delete(context.TODO(), configMap)
+			// Use helper to create shared resources
+			configMap, servingRuntime, err := testutils.SetupTestResources(k8sClient, configs, "tf-serving-raw", "default")
+			Expect(err).NotTo(HaveOccurred())
+			defer testutils.CleanupTestResources(k8sClient, configMap, servingRuntime, nil)
 
-			// Create ServingRuntime
-			servingRuntime := &v1alpha1.ServingRuntime{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tf-serving-raw",
-					Namespace: "default",
-				},
-				Spec: v1alpha1.ServingRuntimeSpec{
-					SupportedModelFormats: []v1alpha1.SupportedModelFormat{
-						{
-							Name:       "tensorflow",
-							Version:    proto.String("1"),
-							AutoSelect: proto.Bool(true),
-						},
-					},
-					ServingRuntimePodSpec: v1alpha1.ServingRuntimePodSpec{
-						Containers: []corev1.Container{
-							{
-								Name:    "kserve-container",
-								Image:   "tensorflow/serving:1.14.0",
-								Command: []string{"/usr/bin/tensorflow_model_server"},
-								Args: []string{
-									"--port=9000",
-									"--rest_api_port=8080",
-									"--model_base_path=/mnt/models",
-									"--rest_api_timeout_in_ms=60000",
-								},
-								Resources: defaultResource,
-							},
-						},
-					},
-					Disabled: proto.Bool(false),
-				},
-			}
-			k8sClient.Create(context.TODO(), servingRuntime)
-			defer k8sClient.Delete(context.TODO(), servingRuntime)
 			serviceName := "raw-foo-customized"
 			expectedRequest := reconcile.Request{NamespacedName: types.NamespacedName{Name: serviceName, Namespace: "default"}}
 			serviceKey := expectedRequest.NamespacedName
