@@ -1,5 +1,3 @@
-//go:build controller_tests
-
 /*
 Copyright 2021 The KServe Authors.
 
