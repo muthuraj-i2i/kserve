@@ -281,62 +281,61 @@ jobs:
           compression-level: 0
           if-no-files-found: error
 
-  test-predictor:
+  setup-environment:
     runs-on: ubuntu-22.04
-    needs: [kserve-image-build, predictor-runtime-build]
+    needs: [kserve-image-build, predictor-runtime-build, explainer-runtime-build, graph-tests-images-build]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Free-up disk space
         uses: ./.github/actions/free-up-disk-space
-
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.9"
-
       - name: Setup Minikube
         uses: ./.github/actions/minikube-setup
-
       - name: KServe dependency setup
         uses: ./.github/actions/kserve-dep-setup
-
       - name: Download base images
         uses: ./.github/actions/base-download
+      - name: Install UV
+        run: ./test/scripts/gh-actions/setup-uv.sh
+      - name: Install KServe
+        run: ./test/scripts/gh-actions/setup-kserve.sh
+      - name: Upload setup artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: setup-artifacts
+          path: ./tmp
 
+  test-predictor:
+    runs-on: ubuntu-22.04
+    needs: [setup-environment]
+    steps:
+      - name: Download setup artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: setup-artifacts
+          path: ./tmp
       - name: Download predictor artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./tmp
           pattern: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-*
           merge-multiple: true
-
       - name: Load docker images
         uses: ./.github/actions/load-docker-images
         with:
           directory: ./tmp
-
-      - name: Install UV
-        run: ./test/scripts/gh-actions/setup-uv.sh
-
-      - name: Install KServe
-        run: |
-          ./test/scripts/gh-actions/setup-kserve.sh
-
-          kubectl get pods -n kserve
-          kubectl describe pods -n kserve
-
       - name: Run predictor E2E tests
         timeout-minutes: 40
         run: |
           ./test/scripts/gh-actions/run-e2e-tests.sh "predictor" "6"
-
       - name: Check system status
         if: always()
         run: |
@@ -344,84 +343,46 @@ jobs:
 
   test-transformer-explainer-mms:
     runs-on: ubuntu-22.04
-    needs:
-      [kserve-image-build, predictor-runtime-build, explainer-runtime-build]
+    needs: [setup-environment]
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      - name: Free-up disk space
-        uses: ./.github/actions/free-up-disk-space
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Download setup artifacts
+        uses: actions/download-artifact@v4
         with:
-          go-version-file: go.mod
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.9"
-
-      - name: Setup Minikube
-        uses: ./.github/actions/minikube-setup
-
-      - name: KServe dependency setup
-        uses: ./.github/actions/kserve-dep-setup
-
-      - name: Download base images
-        uses: ./.github/actions/base-download
-
+          name: setup-artifacts
+          path: ./tmp
       - name: Download transformer and explainer artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./tmp
           pattern: +(${{ env.TRANSFORMER_ARTIFACT_PREFIX }}|${{ env.EXPLAINER_ARTIFACT_PREFIX }})-*
           merge-multiple: true
-
       - name: Download sklearn server image
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.SKLEARN_IMG }}-${{ github.sha }}
           path: ./tmp
-
       - name: Download custom model grpc image
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.CUSTOM_MODEL_GRPC_IMG }}-${{ github.sha }}
           path: ./tmp
-
       - name: Download xgb server image
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.XGB_IMG }}-${{ github.sha }}
           path: ./tmp
-
       - name: Load docker images
         uses: ./.github/actions/load-docker-images
         with:
           directory: ./tmp
-
-      - name: Install UV
-        run: ./test/scripts/gh-actions/setup-uv.sh
-
-      - name: Install KServe
-        run: |
-          ./test/scripts/gh-actions/setup-kserve.sh
-
-          kubectl get pods -n kserve
-          kubectl describe pods -n kserve
-
       - name: Run E2E tests
         timeout-minutes: 30
         run: |
           ./test/scripts/gh-actions/run-e2e-tests.sh "transformer or mms or collocation" "6"
-
       - name: Run E2E tests - explainer
         timeout-minutes: 30
         run: |
           ./test/scripts/gh-actions/run-e2e-tests.sh "explainer" "1"
-
       - name: Check system status
         if: always()
         run: |
@@ -429,75 +390,37 @@ jobs:
 
   test-graph:
     runs-on: ubuntu-22.04
-    needs:
-      [kserve-image-build, predictor-runtime-build, graph-tests-images-build]
+    needs: [setup-environment]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Download setup artifacts
+        uses: actions/download-artifact@v4
         with:
-          go-version-file: go.mod
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.9"
-
-      - name: Free-up disk space
-        uses: ./.github/actions/free-up-disk-space
-
-      - name: Setup Minikube
-        uses: ./.github/actions/minikube-setup
-
-      - name: Download base images
-        uses: ./.github/actions/base-download
-
-      - name: KServe dependency setup
-        uses: ./.github/actions/kserve-dep-setup
-
+          name: setup-artifacts
+          path: ./tmp
       - name: Download graph artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./tmp
           pattern: ${{ env.GRAPH_ARTIFACT_PREFIX }}-*
           merge-multiple: true
-
       - name: Download sklearn server image
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.SKLEARN_IMG }}-${{ github.sha }}
           path: ./tmp
-
       - name: Download xgb server image
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.XGB_IMG }}-${{ github.sha }}
           path: ./tmp
-
       - name: Load docker images
         uses: ./.github/actions/load-docker-images
         with:
           directory: ./tmp
-
-      - name: Install UV
-        run: ./test/scripts/gh-actions/setup-uv.sh
-
-      - name: Install KServe
-        run: |
-          # export VIRTUAL_ENV=python/kserve/.venv
-          # source $VIRTUAL_ENV/bin/activate
-          ./test/scripts/gh-actions/setup-kserve.sh
-
-          kubectl get pods -n kserve
-          kubectl describe pods -n kserve
-
       - name: Run E2E tests for graph
         timeout-minutes: 30
         run: |
           ./test/scripts/gh-actions/run-e2e-tests.sh "graph" "6"
-
       - name: Check system status
         if: always()
         run: |
@@ -505,94 +428,54 @@ jobs:
 
   test-path-based-routing:
     runs-on: ubuntu-22.04
-    needs:
-      [kserve-image-build, predictor-runtime-build, explainer-runtime-build]
+    needs: [setup-environment]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Download setup artifacts
+        uses: actions/download-artifact@v4
         with:
-          go-version-file: go.mod
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.9"
-
-      - name: Free-up disk space
-        uses: ./.github/actions/free-up-disk-space
-
-      - name: Setup Minikube
-        uses: ./.github/actions/minikube-setup
-
-      - name: Download base images
-        uses: ./.github/actions/base-download
-
-      - name: KServe dependency setup
-        uses: ./.github/actions/kserve-dep-setup
-
+          name: setup-artifacts
+          path: ./tmp
       - name: Download sklearn server image
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.SKLEARN_IMG }}-${{ github.sha }}
           path: ./tmp
-
       - name: Download xgb server image
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.XGB_IMG }}-${{ github.sha }}
           path: ./tmp
-
       - name: Download lgb server image
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.LGB_IMG }}-${{ github.sha }}
           path: ./tmp
-
       - name: Download transformer image
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.TRANSFORMER_ARTIFACT_PREFIX }}-${{ env.IMAGE_TRANSFORMER_IMG }}-${{ github.sha }}
           path: ./tmp
-
       - name: Download Art Explainer image
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.EXPLAINER_ARTIFACT_PREFIX }}-${{ env.ART_IMG }}-${{ github.sha }}
           path: ./tmp
-
       - name: Load docker images
         uses: ./.github/actions/load-docker-images
         with:
           directory: ./tmp
-
-      - name: Install UV
-        run: ./test/scripts/gh-actions/setup-uv.sh
-
-      - name: Install KServe
-        run: |
-          ./test/scripts/gh-actions/setup-kserve.sh
-
-          kubectl get pods -n kserve
-          kubectl describe pods -n kserve
-
       - name: Patch inferenceservice config
         run: |
           kubectl patch configmaps -n kserve inferenceservice-config --patch-file config/overlays/test/configmap/inferenceservice-path-template.yaml
           kubectl describe configmaps -n kserve inferenceservice-config
-
       - name: Run E2E tests with path-based routing
         timeout-minutes: 30
         run: |
           ./test/scripts/gh-actions/run-e2e-tests.sh "path_based_routing" "6"
-
       - name: Run E2E tests with path-based routing - Explainer
         timeout-minutes: 30
         run: |
           ./test/scripts/gh-actions/run-e2e-tests.sh "explainer" "1"
-
       - name: Check system status
         if: always()
         run: |
@@ -764,19 +647,6 @@ jobs:
           name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.XGB_IMG }}-${{ github.sha }}
           path: ./tmp
 
-      - name: Download custom model grpc image
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.CUSTOM_MODEL_GRPC_IMG }}-${{ github.sha }}
-          path: ./tmp
-
-      - name: Download transformer and explainer artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./tmp
-          pattern: +(${{ env.TRANSFORMER_ARTIFACT_PREFIX }}|${{ env.EXPLAINER_ARTIFACT_PREFIX }})-*
-          merge-multiple: true
-
       - name: Load docker images
         uses: ./.github/actions/load-docker-images
         with:
@@ -916,7 +786,7 @@ jobs:
       - name: Check system status
         if: always()
         run: |
-          ./test/scripts/gh-actions/status-check.sh "kourier"
+          ./test/scripts/gh-actions/status-check.sh
 
   test-llm:
     runs-on: ubuntu-22.04
