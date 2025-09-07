@@ -186,8 +186,22 @@ check: precommit
 clean:
 	rm -rf $(LOCALBIN)
 
-# Run tests
+# Test targets:
+# - test: Run non-controller tests (faster, good for general development)
+# - test-controller: Run only controller tests (useful for controller development)
+# - test-all: Run all tests (equivalent to the original test command)
+# - test-qpext: Run qpext tests
+
+# Run tests (excluding controller tests)
 test: fmt vet manifests envtest test-qpext
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m $$(go list ./pkg/... | grep -v './pkg/controller') ./cmd/... -coverprofile coverage.out -coverpkg $$(go list ./pkg/... | grep -v './pkg/controller' | tr '\n' ' ') ./cmd...
+
+# Run controller tests separately
+test-controller: fmt vet manifests envtest
+	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m ./pkg/controller/... -coverprofile coverage-controller.out -coverpkg ./pkg/controller/...
+
+# Run all tests (both controller and non-controller)
+test-all: fmt vet manifests envtest test-qpext
 	KUBEBUILDER_ASSETS="$$($(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test --timeout 20m $$(go list ./pkg/...) ./cmd/... -coverprofile coverage.out -coverpkg ./pkg/... ./cmd...
 
 test-qpext:
