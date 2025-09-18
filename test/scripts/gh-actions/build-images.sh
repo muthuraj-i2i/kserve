@@ -33,13 +33,12 @@ STORAGE_INIT_IMG_TAG=${DOCKER_REPO}/${STORAGE_INIT_IMG}:${GITHUB_SHA}
 AGENT_IMG_TAG=${DOCKER_REPO}/${AGENT_IMG}:${GITHUB_SHA}
 ROUTER_IMG_TAG=${DOCKER_REPO}/${ROUTER_IMG}:${GITHUB_SHA}
 
-# Cache directories (local cache, you can switch to registry cache in CI)
-CACHE_DIR="/tmp/.buildx-cache"
-CACHE_DIR_NEW="/tmp/.buildx-cache-new"
+# Registry cache reference
+CACHE_REF=${DOCKER_REPO}/buildcache:latest
 
 mkdir -p "${DOCKER_IMAGES_PATH}"
 
-# Helper function to build with cache
+# Helper function to build with registry cache
 build_image() {
   local dockerfile=$1
   local context=$2
@@ -50,8 +49,8 @@ build_image() {
   docker buildx build \
     -f "${dockerfile}" "${context}" \
     -t "${tag}" \
-    --cache-from=type=local,src=${CACHE_DIR} \
-    --cache-to=type=local,dest=${CACHE_DIR_NEW},mode=max \
+    --cache-from=type=registry,ref=${CACHE_REF} \
+    --cache-to=type=registry,ref=${CACHE_REF},mode=max \
     -o type=docker,dest="${outfile}",compression-level=0
 }
 
@@ -72,8 +71,4 @@ wait  # wait for all parallel builds to finish
 echo "Disk usage after building images:"
 df -hT
 
-# Rotate cache (preserve across builds)
-rm -rf "${CACHE_DIR}"
-mv "${CACHE_DIR_NEW}" "${CACHE_DIR}"
-
-echo "✅ Done building all images"
+echo "✅ Done building all images with registry cache"
