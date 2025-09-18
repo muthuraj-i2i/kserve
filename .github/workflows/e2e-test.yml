@@ -880,6 +880,9 @@ jobs:
       
       - name: KServe dependency setup
         uses: ./.github/actions/kserve-dep-setup
+        with:
+          deployment-mode: "raw"
+          enable-keda: "true"
 
       - name: Download base images
         uses: ./.github/actions/base-download
