@@ -400,7 +400,7 @@ async def test_sklearn_env_update():
 
 @pytest.mark.autoscaling
 @pytest.mark.asyncio(scope="session")
-async def test_sklearn_keda_scale_resource_memory(rest_v1_client):
+async def test_sklearn_keda_scale_resource_memory(rest_v1_client, network_layer):
     """
     Test KEDA autoscaling with new InferenceService (auto_scaling) spec
     """
@@ -465,7 +465,7 @@ async def test_sklearn_keda_scale_resource_memory(rest_v1_client):
     )
     assert scaledobject_resp["items"][0]["spec"]["triggers"][0]["type"] == "memory"
     res = await predict_isvc(
-        rest_v1_client, service_name, INPUT
+        rest_v1_client, service_name, INPUT, network_layer=network_layer
     )
     assert trigger_metadata["value"] == "50"
     assert res["predictions"] == [1, 1]
@@ -474,7 +474,7 @@ async def test_sklearn_keda_scale_resource_memory(rest_v1_client):
 
 @pytest.mark.autoscaling
 @pytest.mark.asyncio(scope="session")
-async def test_sklearn_keda_scale_new_spec_external(rest_v1_client):
+async def test_sklearn_keda_scale_new_spec_external(rest_v1_client, network_layer):
     """
     Test KEDA autoscaling with new InferenceService (auto_scaling) spec
     """
@@ -542,7 +542,7 @@ async def test_sklearn_keda_scale_new_spec_external(rest_v1_client):
     assert trigger_metadata["serverAddress"] == "http://localhost:9090"
     assert trigger_metadata["threshold"] == "50.000000"
     res = await predict_isvc(
-        rest_v1_client, service_name, INPUT
+        rest_v1_client, service_name, INPUT, network_layer=network_layer
     )
     assert res["predictions"] == [1, 1]
     kserve_client.delete(service_name, KSERVE_TEST_NAMESPACE)
@@ -550,7 +550,7 @@ async def test_sklearn_keda_scale_new_spec_external(rest_v1_client):
 
 @pytest.mark.autoscaling
 @pytest.mark.asyncio(scope="session")
-async def test_scaling_sklearn_with_keda_otel_add_on(rest_v1_client):
+async def test_scaling_sklearn_with_keda_otel_add_on(rest_v1_client, network_layer):
     """
     Test KEDA-Otel-Add-On autoscaling with InferenceService (auto_scaling) spec,
     including scale up and scale down behavior by generating load.
@@ -674,7 +674,7 @@ async def test_scaling_sklearn_with_keda_otel_add_on(rest_v1_client):
         async def send_one():
             async with sem:
                 res = await predict_isvc(
-                    rest_v1_client, service_name, INPUT
+                    rest_v1_client, service_name, INPUT, network_layer=network_layer
                 )
                 assert res["predictions"] == [1, 1]
 
