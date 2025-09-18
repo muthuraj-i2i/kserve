@@ -15,9 +15,7 @@ config/
 release/
 
 # Dev / CI / tooling
-tools/
 hack/
-test/
 .github/
 prow_config.yaml
 
