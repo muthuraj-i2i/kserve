@@ -883,6 +883,7 @@ jobs:
         with:
           deployment-mode: "raw"
           enable-keda: "true"
+          network-layer: "istio-ingress"
 
       - name: Download base images
         uses: ./.github/actions/base-download
