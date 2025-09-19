@@ -78,7 +78,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.CONTROLLER_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.CONTROLLER_IMG }}-${{ github.sha }}.tar
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.CONTROLLER_IMG }}-${{ github.sha }}
           compression-level: 0
           if-no-files-found: error
 
@@ -86,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.LOCALMODEL_CONTROLLER_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.LOCALMODEL_CONTROLLER_IMG }}-${{ github.sha }}.tar
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.LOCALMODEL_CONTROLLER_IMG }}-${{ github.sha }}
           compression-level: 0
           if-no-files-found: error
 
@@ -94,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.LOCALMODEL_AGENT_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.LOCALMODEL_AGENT_IMG }}-${{ github.sha }}.tar
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.LOCALMODEL_AGENT_IMG }}-${{ github.sha }}
           compression-level: 0
           if-no-files-found: error
 
@@ -102,7 +102,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.AGENT_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.AGENT_IMG }}-${{ github.sha }}.tar
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.AGENT_IMG }}-${{ github.sha }}
           compression-level: 0
           if-no-files-found: error
 
@@ -110,7 +110,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.STORAGE_INIT_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.STORAGE_INIT_IMG }}-${{ github.sha }}.tar
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.STORAGE_INIT_IMG }}-${{ github.sha }}
           compression-level: 0
           if-no-files-found: error
 
@@ -118,9 +118,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.ROUTER_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.ROUTER_IMG }}-${{ github.sha }}.tar
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.ROUTER_IMG }}-${{ github.sha }}
           compression-level: 0
           if-no-files-found: error
+
   predictor-runtime-build:
     runs-on: ubuntu-latest
     steps:
@@ -742,6 +743,16 @@ jobs:
       - name: Setup Minikube
         uses: ./.github/actions/minikube-setup
 
+      - name: Enable metrics server
+        run: |
+          minikube addons enable metrics-server
+          kubectl rollout status deployment/metrics-server -n kube-system --timeout=180s
+          kubectl get pods -n kube-system | grep metrics-server
+
+      - name: Check Metrics Server Logs
+        run: |
+          kubectl logs -n kube-system deploy/metrics-server
+      
       - name: KServe dependency setup
         uses: ./.github/actions/kserve-dep-setup
         with:
@@ -854,24 +865,19 @@ jobs:
         with:
           python-version: "3.9"
 
-      # 🚀 Replace Minikube with KinD
-      - name: Setup KinD cluster
-        uses: helm/kind-action@v1
-        with:
-          cluster_name: kind
-          version: v0.24.0   # pin KinD version (optional)
-          node_image: kindest/node:v1.30.0 # match your k8s version needs
+      - name: Setup Minikube
+        uses: ./.github/actions/minikube-setup
 
       - name: Enable metrics server
         run: |
-          kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+          minikube addons enable metrics-server
           kubectl rollout status deployment/metrics-server -n kube-system --timeout=180s
           kubectl get pods -n kube-system | grep metrics-server
 
       - name: Check Metrics Server Logs
         run: |
           kubectl logs -n kube-system deploy/metrics-server
-
+      
       - name: KServe dependency setup
         uses: ./.github/actions/kserve-dep-setup
         with:
@@ -888,12 +894,10 @@ jobs:
           name: ${{ env.PREDICTOR_ARTIFACT_PREFIX }}-${{ env.SKLEARN_IMG }}-${{ github.sha }}
           path: ./tmp
 
-      # 📦 For KinD, images must be explicitly loaded into cluster
       - name: Load docker images
-        run: |
-          for img in ./tmp/*.tar; do
-            kind load image-archive "$img" --name kind
-          done
+        uses: ./.github/actions/load-docker-images
+        with:
+          directory: ./tmp
 
       - name: Install UV
         run: ./test/scripts/gh-actions/setup-uv.sh
