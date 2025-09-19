@@ -2,17 +2,38 @@ ARG PYTHON_VERSION=3.11
 ARG BASE_IMAGE=python:${PYTHON_VERSION}-slim-bookworm
 ARG VENV_PATH=/prod_venv
 
+# ----------------------------
+# Stage 1: Build wheels once
+# ----------------------------
+FROM ${BASE_IMAGE} AS wheels
+
+# Install system build deps needed for gssapi/krb5
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc g++ make cmake \
+    libkrb5-dev libssl-dev libffi-dev \
+    pkg-config python3-dev \
+    curl \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    ln -s /root/.local/bin/uv /usr/local/bin/uv
+
+# Build wheelhouse for Kerberos-related packages
+RUN uv pip wheel --wheel-dir /wheels \
+      krbcontext==0.10 \
+      hdfs~=2.6.0 \
+      requests-kerberos==0.14.0
+
+# ----------------------------
+# Stage 2: Builder
+# ----------------------------
 FROM ${BASE_IMAGE} AS builder
 
-# Install all system + Kerberos build dependencies in one go
+# Install runtime build tools (lighter than wheels stage)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3-dev \
-      curl \
-      build-essential \
-      gcc \
-      libkrb5-dev \
-      krb5-config \
-    && rm -rf /var/lib/apt/lists/*
+    python3-dev curl gcc libkrb5-dev libssl-dev libffi-dev \
+ && rm -rf /var/lib/apt/lists/*
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
@@ -24,19 +45,17 @@ ENV VIRTUAL_ENV=${VENV_PATH}
 RUN uv venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Install Python dependencies (main project first)
+# Install project dependencies (from lockfile)
 COPY storage/pyproject.toml storage/uv.lock storage/
-RUN cd storage && uv sync --active  # ✅ drop --no-cache here for caching between builds
+RUN cd storage && uv sync --active
 
-# Install Kerberos-related packages AFTER system libs are in place
-RUN uv pip install \
-      krbcontext==0.10 \
-      hdfs~=2.6.0 \
-      requests-kerberos==0.14.0
+# Copy wheelhouse from previous stage and install
+COPY --from=wheels /wheels /wheels
+RUN uv pip install --no-cache-dir /wheels/*.whl
 
 # Install your project
 COPY storage storage
-RUN cd storage && uv pip install . --no-cache  # this can stay no-cache for dev speed if needed
+RUN cd storage && uv pip install . --no-cache
 
 # Generate third-party licenses
 COPY pyproject.toml pyproject.toml
@@ -44,6 +63,9 @@ COPY third_party/pip-licenses.py pip-licenses.py
 RUN pip install --no-cache-dir tomli
 RUN mkdir -p third_party/library && python3 pip-licenses.py
 
+# ----------------------------
+# Stage 3: Production
+# ----------------------------
 FROM ${BASE_IMAGE} AS prod
 
 ARG VENV_PATH
