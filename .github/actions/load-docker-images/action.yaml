@@ -1,5 +1,5 @@
 name: 'Load docker images'
-description: 'Loads docker images from the tar files in specified director and deletes the directory'
+description: 'Loads docker images from the tar files in specified directory and deletes the directory'
 
 inputs:
   directory:
@@ -12,10 +12,11 @@ runs:
     - name: Load docker images
       shell: bash
       run: |
-        files=$(find ${{ inputs.directory }} -maxdepth 1 -type f)
-        for file in ${files[@]};do
-          echo "Loading image $(basename ${file})"
-          docker image load -i ${file}
+        files=$(find "${{ inputs.directory }}" -maxdepth 1 -type f -name '*.tar')
+        for file in ${files[@]}; do
+          echo "Loading image $(basename "${file}")"
+          # Use "<" to load OCI tarballs
+          docker load < "${file}"
         done
-        rm -rf ${{ inputs.directory }}
+        rm -rf "${{ inputs.directory }}"
         docker image ls

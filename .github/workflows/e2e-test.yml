@@ -78,7 +78,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.CONTROLLER_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.CONTROLLER_IMG }}-${{ github.sha }}
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.CONTROLLER_IMG }}-${{ github.sha }}.tar
           compression-level: 0
           if-no-files-found: error
 
@@ -86,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.LOCALMODEL_CONTROLLER_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.LOCALMODEL_CONTROLLER_IMG }}-${{ github.sha }}
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.LOCALMODEL_CONTROLLER_IMG }}-${{ github.sha }}.tar
           compression-level: 0
           if-no-files-found: error
 
@@ -94,7 +94,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.LOCALMODEL_AGENT_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.LOCALMODEL_AGENT_IMG }}-${{ github.sha }}
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.LOCALMODEL_AGENT_IMG }}-${{ github.sha }}.tar
           compression-level: 0
           if-no-files-found: error
 
@@ -102,7 +102,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.AGENT_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.AGENT_IMG }}-${{ github.sha }}
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.AGENT_IMG }}-${{ github.sha }}.tar
           compression-level: 0
           if-no-files-found: error
 
@@ -110,7 +110,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.STORAGE_INIT_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.STORAGE_INIT_IMG }}-${{ github.sha }}
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.STORAGE_INIT_IMG }}-${{ github.sha }}.tar
           compression-level: 0
           if-no-files-found: error
 
@@ -118,10 +118,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BASE_ARTIFACT_PREFIX }}-${{ env.ROUTER_IMG }}-${{ github.sha }}
-          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.ROUTER_IMG }}-${{ github.sha }}
+          path: ${{ env.DOCKER_IMAGES_PATH }}/${{ env.ROUTER_IMG }}-${{ github.sha }}.tar
           compression-level: 0
           if-no-files-found: error
-
   predictor-runtime-build:
     runs-on: ubuntu-latest
     steps:

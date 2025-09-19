@@ -18,11 +18,14 @@
 
 # TODO: Implement selective building and tag replacement based on modified code.
 
+#!/usr/bin/env bash
 set -o errexit
 set -o nounset
 set -o pipefail
 
 echo "Github SHA ${GITHUB_SHA}"
+
+# Define image tags
 CONTROLLER_IMG_TAG=${DOCKER_REPO}/${CONTROLLER_IMG}:${GITHUB_SHA}
 LOCALMODEL_CONTROLLER_IMG_TAG=${DOCKER_REPO}/${LOCALMODEL_CONTROLLER_IMG}:${GITHUB_SHA}
 LOCALMODEL_AGENT_IMG_TAG=${DOCKER_REPO}/${LOCALMODEL_AGENT_IMG}:${GITHUB_SHA}
@@ -30,33 +33,26 @@ STORAGE_INIT_IMG_TAG=${DOCKER_REPO}/${STORAGE_INIT_IMG}:${GITHUB_SHA}
 AGENT_IMG_TAG=${DOCKER_REPO}/${AGENT_IMG}:${GITHUB_SHA}
 ROUTER_IMG_TAG=${DOCKER_REPO}/${ROUTER_IMG}:${GITHUB_SHA}
 
-echo "Building Kserve controller image"
-docker buildx build . -t "${CONTROLLER_IMG_TAG}" \
-  -o type=docker,dest="${DOCKER_IMAGES_PATH}/${CONTROLLER_IMG}-${GITHUB_SHA}",compression-level=0
+# Function to build & export as OCI tarball
+build_and_export() {
+  name=$1
+  dockerfile=$2
+  context_dir=$3
 
-echo "Building localmodel controller image"
-docker buildx build -f localmodel.Dockerfile . -t "${LOCALMODEL_CONTROLLER_IMG_TAG}" \
-  -o type=docker,dest="${DOCKER_IMAGES_PATH}/${LOCALMODEL_CONTROLLER_IMG}-${GITHUB_SHA}",compression-level=0
+  echo "Building ${name} image"
+  docker buildx build -f "${dockerfile}" "${context_dir}" \
+    -t "${DOCKER_REPO}/${name}:${GITHUB_SHA}" \
+    -o "type=oci,dest=${DOCKER_IMAGES_PATH}/${name}-${GITHUB_SHA}.tar" &
+}
 
-echo "Building localmodel agent image"
-docker buildx build -f localmodel-agent.Dockerfile . -t "${LOCALMODEL_AGENT_IMG_TAG}" \
-  -o type=docker,dest="${DOCKER_IMAGES_PATH}/${LOCALMODEL_AGENT_IMG}-${GITHUB_SHA}",compression-level=0
+# Build all images in parallel
+build_and_export "${CONTROLLER_IMG}" Dockerfile .
+build_and_export "${LOCALMODEL_CONTROLLER_IMG}" localmodel.Dockerfile .
+build_and_export "${LOCALMODEL_AGENT_IMG}" localmodel-agent.Dockerfile .
+build_and_export "${AGENT_IMG}" agent.Dockerfile .
+build_and_export "${ROUTER_IMG}" router.Dockerfile .
+build_and_export "${STORAGE_INIT_IMG}" storage-initializer.Dockerfile python
 
-echo "Building agent image"
-docker buildx build -f agent.Dockerfile . -t "${AGENT_IMG_TAG}" \
-  -o type=docker,dest="${DOCKER_IMAGES_PATH}/${AGENT_IMG}-${GITHUB_SHA}",compression-level=0
+wait
 
-echo "Building router image"
-docker buildx build -f router.Dockerfile . -t "${ROUTER_IMG_TAG}" \
-  -o type=docker,dest="${DOCKER_IMAGES_PATH}/${ROUTER_IMG}-${GITHUB_SHA}",compression-level=0
-
-echo "Disk usage before Building storage initializer:"
-        df -hT
-
-pushd python >/dev/null
-  echo "Building storage initializer"
-  docker buildx build -f storage-initializer.Dockerfile . -t "${STORAGE_INIT_IMG_TAG}" \
-    -o type=docker,dest="${DOCKER_IMAGES_PATH}/${STORAGE_INIT_IMG}-${GITHUB_SHA}",compression-level=0
-popd
-
-echo "Done building images"
+echo "All images built and exported as OCI tarballs"
