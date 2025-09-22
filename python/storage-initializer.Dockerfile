@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Kerberos-related packages
-RUN uv pip install --no-cache \
+RUN uv pip install \
     krbcontext==0.10 \
     hdfs~=2.6.0 \
     requests-kerberos==0.14.0
