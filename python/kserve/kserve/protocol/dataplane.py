@@ -462,7 +462,6 @@ class DataPlane:
 
         .. _CloudEvent: https://cloudevents.io/
         """
-        logger.info("Handling inference request for model %s", model_name)
         # call model locally or remote model workers
         response_headers = {}
         model = await self.get_model(model_name)
