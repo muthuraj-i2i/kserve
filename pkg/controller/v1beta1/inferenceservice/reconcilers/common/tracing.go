@@ -16,8 +16,6 @@ import (
 
 const tracerName = "github.com/kserve/kserve/controller"
 
-var defaultTracer = otel.Tracer(tracerName)
-
 // tracingReconciler decorates a reconcile.Reconciler to start an OpenTelemetry span
 // for each reconciliation and ensures the context is seeded with the trace-aware logger.
 type tracingReconciler struct {
@@ -36,7 +34,7 @@ func WrapWithTracing(delegate reconcile.Reconciler, fallback logr.Logger, spanNa
 
 	return &tracingReconciler{
 		delegate: delegate,
-		tracer:   defaultTracer,
+		tracer:   otel.Tracer(tracerName),
 		fallback: fallback,
 		spanName: spanName,
 	}
