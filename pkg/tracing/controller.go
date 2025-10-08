@@ -13,7 +13,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -76,9 +75,7 @@ func buildExporter(parent context.Context) (sdktrace.SpanExporter, string, bool,
 		endpoint = strings.TrimSpace(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"))
 	}
 
-	dialOpts := []otlptracegrpc.Option{
-		otlptracegrpc.WithDialOption(grpc.WithBlock()),
-	}
+	dialOpts := []otlptracegrpc.Option{}
 
 	if endpoint != "" {
 		dialOpts = append(dialOpts, otlptracegrpc.WithEndpoint(endpoint))
