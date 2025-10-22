@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	errors "k8s.io/apimachinery/pkg/api/errors"
@@ -1439,4 +1440,117 @@ func TestCreateRawDeploymentWithPrecedence(t *testing.T) {
 			assert.Equal(t, tt.expectedMaxUnavailable, deployment.Spec.Strategy.RollingUpdate.MaxUnavailable, tt.description+" - MaxUnavailable")
 		})
 	}
+}
+
+func TestAddGPUResourceToDeploymentSwitchesResourceType(t *testing.T) {
+	deployment := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: constants.InferenceServiceContainerName,
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceName(constants.NvidiaGPUResourceType): resource.MustParse("1"),
+									corev1.ResourceName(constants.AmdGPUResourceType):    resource.MustParse("1"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceName(constants.NvidiaGPUResourceType): resource.MustParse("1"),
+									corev1.ResourceName(constants.AmdGPUResourceType):    resource.MustParse("1"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := addGPUResourceToDeployment(deployment, constants.InferenceServiceContainerName, "2")
+	require.NoError(t, err)
+
+	container := deployment.Spec.Template.Spec.Containers[0]
+	assert.Len(t, container.Resources.Limits, 1)
+	limitQty := container.Resources.Limits[corev1.ResourceName(constants.AmdGPUResourceType)]
+	assert.Equal(t, "2", limitQty.String())
+	_, hasNvidiaLimit := container.Resources.Limits[corev1.ResourceName(constants.NvidiaGPUResourceType)]
+	assert.False(t, hasNvidiaLimit)
+
+	assert.Len(t, container.Resources.Requests, 1)
+	requestQty := container.Resources.Requests[corev1.ResourceName(constants.AmdGPUResourceType)]
+	assert.Equal(t, "2", requestQty.String())
+	_, hasNvidiaRequest := container.Resources.Requests[corev1.ResourceName(constants.NvidiaGPUResourceType)]
+	assert.False(t, hasNvidiaRequest)
+}
+
+func TestAddGPUResourceToDeploymentRemovesGpuWhenCountEmpty(t *testing.T) {
+	deployment := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: constants.InferenceServiceContainerName,
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceName(constants.NvidiaGPUResourceType): resource.MustParse("1"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceName(constants.NvidiaGPUResourceType): resource.MustParse("1"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := addGPUResourceToDeployment(deployment, constants.InferenceServiceContainerName, "")
+	require.NoError(t, err)
+
+	container := deployment.Spec.Template.Spec.Containers[0]
+	assert.Empty(t, container.Resources.Limits)
+	assert.Empty(t, container.Resources.Requests)
+}
+
+func TestAddGPUResourceToDeploymentInvalidCount(t *testing.T) {
+	deployment := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: constants.InferenceServiceContainerName,
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceName(constants.NvidiaGPUResourceType): resource.MustParse("1"),
+								},
+								Requests: corev1.ResourceList{
+									corev1.ResourceName(constants.NvidiaGPUResourceType): resource.MustParse("1"),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := addGPUResourceToDeployment(deployment, constants.InferenceServiceContainerName, "invalid")
+	require.Error(t, err)
+
+	container := deployment.Spec.Template.Spec.Containers[0]
+	assert.Contains(t, container.Resources.Limits, corev1.ResourceName(constants.NvidiaGPUResourceType))
+	assert.Contains(t, container.Resources.Requests, corev1.ResourceName(constants.NvidiaGPUResourceType))
 }
