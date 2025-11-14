@@ -514,11 +514,11 @@ async def test_input_padding_with_pad_token_not_specified(
         temperature=0,
     )
     response = await openai_gpt_model.create_completion(request)
-    # vLLM completions for openai-gpt are non-deterministic across releases, so we
-    # just verify padding let both prompts complete without raising and produced text.
-    assert len(response.choices) == 2
-    for choice in response.choices:
-        assert choice.text.strip()
+    assert (
+        response.choices[0].text
+        == "west , and the sun sets in the west . \n the sun rises in the"
+    )
+    assert "a member of the royal family ." in response.choices[1].text
 
 
 @pytest.mark.asyncio
