@@ -392,10 +392,18 @@ class HuggingfaceGenerativeModel(
     def build_generation_config(self, request: CompletionRequest) -> GenerationConfig:
         kwargs = {
             "max_new_tokens": request.max_tokens,
-            "top_p": request.top_p,
-            "temperature": request.temperature,
             "pad_token_id": self._tokenizer.pad_token_id,
         }
+        if request.top_p is not None:
+            kwargs["top_p"] = request.top_p
+
+        # vLLM >=0.10 surfaces different outputs for temperature=0 unless we explicitly
+        # disable sampling. Preserve historical greedy behaviour for deterministic tests.
+        if request.temperature is not None:
+            if request.temperature <= 0:
+                kwargs["do_sample"] = False
+            else:
+                kwargs["temperature"] = request.temperature
         if request.presence_penalty and request.presence_penalty > 0:
             kwargs["repetition_penalty"] = request.presence_penalty
         if request.logit_bias is not None:

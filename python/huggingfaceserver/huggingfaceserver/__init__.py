@@ -13,6 +13,28 @@
 # limitations under the License.
 
 from enum import Enum, auto as auto_value
+from typing import Any
+
+try:
+    from transformers import AutoConfig
+except ImportError:  # pragma: no cover - transformers optional for some builds
+    AutoConfig = None
+else:
+    # vLLM >=0.10 re-registers AIMv2 configs; guard against duplicate registration crashes.
+    if not getattr(AutoConfig.register, "_kserve_safe", False):
+        _orig_register = AutoConfig.register
+
+        def _safe_register(model_type: str, config: Any, exist_ok: bool = False):
+            try:
+                return _orig_register(model_type, config, exist_ok=exist_ok)
+            except ValueError as err:
+                if "already used by a Transformers config" in str(err):
+                    return None
+                raise
+
+        _safe_register._kserve_safe = True
+        AutoConfig.register = _safe_register
+
 from .encoder_model import HuggingfaceEncoderModel
 from .generative_model import HuggingfaceGenerativeModel
 from .time_series_model import HuggingFaceTimeSeriesModel
