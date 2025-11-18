@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -413,33 +414,83 @@ func addGPUResourceToDeployment(deployment *appsv1.Deployment, targetContainerNa
 
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == targetContainerName {
+			containerResources := &deployment.Spec.Template.Spec.Containers[i].Resources
+
+			// Walk through all known GPU resource types to remember the last non-zero entry
+			// so we can reuse the previously requested type when the count changes without annotations.
 			for _, gpuType := range updatedGPUResourceTypeList {
 				resourceName := corev1.ResourceName(gpuType)
-				if qty, exists := deployment.Spec.Template.Spec.Containers[i].Resources.Limits[resourceName]; exists && !qty.IsZero() {
+				if qty, exists := containerResources.Limits[resourceName]; exists && !qty.IsZero() {
 					gpuResourceType = resourceName
-					break
+					continue
 				}
-				if qty, exists := deployment.Spec.Template.Spec.Containers[i].Resources.Requests[resourceName]; exists && !qty.IsZero() {
+				if qty, exists := containerResources.Requests[resourceName]; exists && !qty.IsZero() {
 					gpuResourceType = resourceName
-					break
 				}
 			}
 
-			// Initialize Limits map if it's nil
-			if container.Resources.Limits == nil {
-				deployment.Spec.Template.Spec.Containers[i].Resources.Limits = make(map[corev1.ResourceName]resource.Quantity)
+			if gpuResourceType == corev1.ResourceName(constants.NvidiaGPUResourceType) {
+				// If no generic GPU type was detected, prefer any existing MIG resource requests.
+				for resourceName, qty := range containerResources.Limits {
+					if strings.HasPrefix(string(resourceName), constants.NvidiaMigGPUResourceTypePrefix) && !qty.IsZero() {
+						gpuResourceType = resourceName
+						break
+					}
+				}
+				if gpuResourceType == corev1.ResourceName(constants.NvidiaGPUResourceType) {
+					for resourceName, qty := range containerResources.Requests {
+						if strings.HasPrefix(string(resourceName), constants.NvidiaMigGPUResourceTypePrefix) && !qty.IsZero() {
+							gpuResourceType = resourceName
+							break
+						}
+					}
+				}
 			}
 
-			// Assign the gpuCount value to the GPU resource limits
-			deployment.Spec.Template.Spec.Containers[i].Resources.Limits[gpuResourceType] = resource.MustParse(gpuCount)
-
-			// Initialize Requests map if it's nil
-			if container.Resources.Requests == nil {
-				deployment.Spec.Template.Spec.Containers[i].Resources.Requests = make(map[corev1.ResourceName]resource.Quantity)
+			trimmedGPUCount := strings.TrimSpace(gpuCount)
+			var (
+				qty          resource.Quantity
+				shouldAssign bool
+			)
+			if trimmedGPUCount != "" {
+				parsedQty, err := resource.ParseQuantity(trimmedGPUCount)
+				if err != nil {
+					return fmt.Errorf("invalid GPU count %q: %w", gpuCount, err)
+				}
+				qty = parsedQty
+				shouldAssign = true
+			}
+			// Remove every known GPU resource slot so that only the desired type remains afterwards.
+			for _, gpuType := range updatedGPUResourceTypeList {
+				resourceName := corev1.ResourceName(gpuType)
+				delete(containerResources.Limits, resourceName)
+				delete(containerResources.Requests, resourceName)
+			}
+			// MIG resource names are dynamic, so clear any leftover entries that share the prefix.
+			for resourceName := range containerResources.Limits {
+				if strings.HasPrefix(string(resourceName), constants.NvidiaMigGPUResourceTypePrefix) {
+					delete(containerResources.Limits, resourceName)
+				}
+			}
+			for resourceName := range containerResources.Requests {
+				if strings.HasPrefix(string(resourceName), constants.NvidiaMigGPUResourceTypePrefix) {
+					delete(containerResources.Requests, resourceName)
+				}
 			}
 
-			// Assign the gpuCount value to the GPU resource requests
-			deployment.Spec.Template.Spec.Containers[i].Resources.Requests[gpuResourceType] = resource.MustParse(gpuCount)
+			if !shouldAssign {
+				break
+			}
+
+			if containerResources.Limits == nil {
+				containerResources.Limits = make(map[corev1.ResourceName]resource.Quantity)
+			}
+			containerResources.Limits[gpuResourceType] = qty
+
+			if containerResources.Requests == nil {
+				containerResources.Requests = make(map[corev1.ResourceName]resource.Quantity)
+			}
+			containerResources.Requests[gpuResourceType] = qty
 			break
 		}
 	}
