@@ -1,0 +1,45 @@
+# Ignore version control
+.git
+.gitignore
+
+# Docs and markdown
+docs/
+*.md
+ROADMAP.md
+README.md
+
+# Helm, charts, install manifests
+charts/
+install/
+config/
+release/
+
+# Dev / CI / tooling
+hack/
+.github/
+prow_config.yaml
+
+# Local artifacts
+*.log
+*.tmp
+*.out
+*.swp
+*.swo
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Node / frontend if any
+node_modules/
+
+# Go build artifacts
+bin/
+dist/
+
+# Coverage reports
+coverage/
+*.cov
+*.cov-ignore
+
+# Anything in release packaging
