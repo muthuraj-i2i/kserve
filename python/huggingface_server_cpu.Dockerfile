@@ -125,6 +125,8 @@ COPY third_party/pip-licenses.py pip-licenses.py
 RUN pip install --no-cache-dir tomli
 RUN mkdir -p third_party/library && python3 pip-licenses.py
 
+RUN df -hT
+
 # Build the final image
 FROM base AS prod
 
@@ -142,6 +144,8 @@ COPY --from=builder --chown=kserve:kserve $VIRTUAL_ENV $VIRTUAL_ENV
 COPY --from=builder --chown=kserve:kserve huggingfaceserver huggingfaceserver
 COPY --from=builder --chown=kserve:kserve kserve kserve
 COPY --from=builder --chown=kserve:kserve storage storage
+
+RUN df -hT
 
 RUN df -hT
 
